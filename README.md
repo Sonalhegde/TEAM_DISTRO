@@ -4,6 +4,7 @@
 
 ![Project Status](https://img.shields.io/badge/Status-Complete-success?style=for-the-badge)
 ![Team ID](https://img.shields.io/badge/Team%20ID-LRC--26--0528-blue?style=for-the-badge)
+[![Live 3D Digital Twin](https://img.shields.io/badge/Live%20Simulation-3D%20Digital%20Twin-brightgreen?style=for-the-badge&logo=three.js)](https://sonalhegde.github.io/TEAM_DISTRO/)
 ![Controller](https://img.shields.io/badge/Controller-ESP32%20NodeMCU-red?style=for-the-badge&logo=espressif)
 ![Firmware](https://img.shields.io/badge/Firmware-C%2B%2B%20%2F%20Arduino-teal?style=for-the-badge&logo=arduino)
 ![Python DAQ](https://img.shields.io/badge/DAQ-Python%203.13-yellow?style=for-the-badge&logo=python)
@@ -11,7 +12,22 @@
 ### **TEAM DISTRO**
 **Industrial Manufacturing Process Automations: Liquid-Handling & Recirculation Control System**
 
+👉 **[Launch Interactive 3D Digital Twin Simulation (GitHub Pages)](https://sonalhegde.github.io/TEAM_DISTRO/)** 👈
+
 </div>
+
+---
+
+## 🚀 Live 3D Digital Twin Simulation
+An interactive WebGL 3D simulation of the liquid handling rig is hosted live on GitHub Pages:
+**🔗 Direct URL:** [https://sonalhegde.github.io/TEAM_DISTRO/](https://sonalhegde.github.io/TEAM_DISTRO/)
+
+- **Physics-Consistent Hydraulics:** Real-time mass balance across TK-01, SMP-01, and TK-02.
+- **Embedded ESP32 State Machine:** Exact replica of firmware FSM (IDLE, CASE1, CASE1_ALARM, FLUSH, DONE).
+- **Interactive Disturbances:** One-click 2.5L external fluid injection to trigger LS-01 float trip and Pump-01 level interlock.
+- **Sensor Calibration Suite:** Interactive 5-point bucket test regression solver ($Q = af + b$, $R^2$, error metrics).
+- **Dynamic 2D Live Charts:** Real-time Flow vs Time (mL/s & L/min), Tank Volumes, Valve Throttling Curve, and Sensor Calibration.
+- **P&ID Overlays & SVG Export:** Live instrument tagging overlay and one-click SVG export.
 
 ---
 
