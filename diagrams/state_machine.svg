@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 550" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #0f172a; }
+      .state { fill: #ffffff; stroke: #3b82f6; stroke-width: 2; rx: 8; }
+      .state-active { fill: #eff6ff; stroke: #1d4ed8; stroke-width: 2.5; rx: 8; }
+      .state-alarm { fill: #fef2f2; stroke: #dc2626; stroke-width: 2.5; rx: 8; }
+      .state-flush { fill: #ecfdf5; stroke: #059669; stroke-width: 2.5; rx: 8; }
+      .state-stop { fill: #f1f5f9; stroke: #475569; stroke-width: 2.5; rx: 8; }
+      .state-title { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: bold; fill: #1e293b; text-anchor: middle; }
+      .state-desc { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10.5px; fill: #475569; text-anchor: middle; }
+      .trans-line { stroke: #64748b; stroke-width: 1.8; fill: none; }
+      .trans-text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9.5px; font-weight: bold; fill: #0369a1; text-anchor: middle; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#64748b" />
+    </marker>
+  </defs>
+
+  <rect width="950" height="550" class="bg" />
+
+  <text x="30" y="35" class="title">AUTOMATION CONTROL FINITE STATE MACHINE (FSM)</text>
+  <text x="30" y="55" font-family="'Segoe UI', Arial" font-size="12" fill="#64748b">Case 1 Closed-Loop Recirculation, Level Fault Interlock &amp; Case 2 Flush Sequence</text>
+
+  <!-- STATE: STANDBY / IDLE -->
+  <rect x="40" y="220" width="160" height="90" class="state-stop" />
+  <text x="120" y="248" class="state-title">STATE 0: IDLE / OFF</text>
+  <text x="120" y="270" class="state-desc">Pumps 1,2,3: OFF</text>
+  <text x="120" y="285" class="state-desc">OV-01 Solenoid: CLOSED</text>
+  <text x="120" y="300" class="state-desc">Waiting for Switch ON</text>
+
+  <!-- STATE: CASE 1 NORMAL RECIRCULATION -->
+  <rect x="290" y="110" width="220" height="110" class="state-active" />
+  <text x="400" y="138" class="state-title" style="fill:#1d4ed8;">STATE 1: RECIRCULATION</text>
+  <text x="400" y="160" class="state-desc">OV-01: OPEN (Process feed)</text>
+  <text x="400" y="177" class="state-desc">Pump-01: 50% PWM Duty</text>
+  <text x="400" y="194" class="state-desc">Pump-02: 100% PWM Duty</text>
+  <text x="400" y="210" class="state-desc">FT-01: Active Logging (3 L/min)</text>
+
+  <!-- STATE: CASE 1 HIGH LEVEL OVERFLOW MITIGATION -->
+  <rect x="290" y="330" width="220" height="110" class="state-alarm" />
+  <text x="400" y="358" class="state-title" style="fill:#b91c1c;">STATE 2: LEVEL INTERLOCK</text>
+  <text x="400" y="380" class="state-desc">Float Switch = HIGH (External fluid)</text>
+  <text x="400" y="397" class="state-desc" style="font-weight:bold; fill:#dc2626;">Pump-01: STOPPED (0%)</text>
+  <text x="400" y="414" class="state-desc" style="font-weight:bold; fill:#15803d;">Pump-02: RUNNING (100%)</text>
+  <text x="400" y="430" class="state-desc">Evacuating Sump back to 10L</text>
+
+  <!-- STATE: CASE 2 FLUSH & LINE CONDITIONING -->
+  <rect x="620" y="110" width="240" height="120" class="state-flush" />
+  <text x="740" y="138" class="state-title" style="fill:#047857;">STATE 3: CASE 2 FLUSH</text>
+  <text x="740" y="160" class="state-desc" style="font-weight:bold; fill:#b91c1c;">OV-01: CLOSED (Isolate 10L Tank)</text>
+  <text x="740" y="177" class="state-desc">Pump-03: ON (Flush water delivery)</text>
+  <text x="740" y="194" class="state-desc">Pump-01 &amp; Pump-02: RUNNING</text>
+  <text x="740" y="212" class="state-desc">All 3 Pumps Simultaneous Operation</text>
+
+  <!-- STATE: SAFE SHUTDOWN COMPLETE -->
+  <rect x="620" y="340" width="240" height="95" class="state-stop" style="fill:#f8fafc; stroke:#047857;" />
+  <text x="740" y="370" class="state-title" style="fill:#0f766e;">STATE 4: SAFE SHUTDOWN</text>
+  <text x="740" y="392" class="state-desc">4.2L Flush Tank Depleted</text>
+  <text x="740" y="409" class="state-desc">All Pumps Stopped | Valves Safe</text>
+  <text x="740" y="425" class="state-desc">System In Safe OFF Condition</text>
+
+  <!-- TRANSITIONS -->
+  <!-- 0 -> 1 -->
+  <path d="M 200 240 L 250 240 L 250 165 L 290 165" class="trans-line" marker-end="url(#arrow)" />
+  <text x="245" y="150" class="trans-text">Switch ON</text>
+
+  <!-- 1 -> 2 (Float High) -->
+  <path d="M 370 220 L 370 330" class="trans-line" marker-end="url(#arrow)" />
+  <text x="325" y="275" class="trans-text" style="fill:#dc2626;">Sump Float HIGH</text>
+
+  <!-- 2 -> 1 (Float Normal) -->
+  <path d="M 430 330 L 430 220" class="trans-line" marker-end="url(#arrow)" />
+  <text x="475" y="275" class="trans-text" style="fill:#16a34a;">Sump Cleared</text>
+
+  <!-- 1 -> 3 (Case 2 Start) -->
+  <path d="M 510 165 L 620 165" class="trans-line" marker-end="url(#arrow)" />
+  <text x="565" y="150" class="trans-text">BV-02 Opened / Flush Trig</text>
+
+  <!-- 3 -> 4 (Flush Exhausted) -->
+  <path d="M 740 230 L 740 340" class="trans-line" marker-end="url(#arrow)" />
+  <text x="740" y="285" class="trans-text" style="fill:#047857;">Flush Tank Empty (Flow Drops)</text>
+
+  <!-- 4 -> 0 (System Reset) -->
+  <path d="M 620 390 L 120 390 L 120 310" class="trans-line" marker-end="url(#arrow)" />
+  <text x="360" y="405" class="trans-text">Reset / Power Cycle</text>
+</svg>
