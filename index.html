@@ -3,110 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lam Research Challenge 3.0 | 3D Digital Twin - Stage 2 Liquid-Flow Rig</title>
+  <title>Lam Research Challenge 3.0 | Photorealistic 3D Digital Twin - Stage 2 Liquid-Flow Rig</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     :root {
-      --bg-dark: #0b0f19;
-      --panel-bg: rgba(17, 24, 39, 0.92);
-      --border-color: rgba(59, 130, 246, 0.25);
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
+      --bg-dark: #070a13;
+      --panel-bg: rgba(13, 19, 33, 0.94);
+      --border-color: rgba(56, 189, 248, 0.28);
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
       --accent: #06b6d4;
       --danger: #ef4444;
       --warning: #f59e0b;
       --success: #10b981;
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body { background: var(--bg-dark); color: var(--text); overflow: hidden; height: 100vh; width: 100vw; }
+    body { background: var(--bg-dark); color: var(--text); overflow: hidden; height: 100vh; width: 100vw; user-select: none; }
     #canvas-container { position: absolute; inset: 0; z-index: 1; }
 
     /* Top Bar */
     .top-bar {
       position: absolute; top: 0; left: 0; right: 0; height: 56px;
-      background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(12px);
+      background: rgba(7, 10, 19, 0.88); backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border-color); z-index: 10;
-      display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 18px;
     }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .brand-title { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: #fff; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-title { font-size: 15px; font-weight: 800; letter-spacing: 0.6px; color: #fff; display: flex; align-items: center; gap: 8px; }
     .brand-sub { font-size: 11px; color: var(--accent); }
     .status-badge {
-      padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700;
+      padding: 4px 14px; border-radius: 9999px; font-size: 11px; font-weight: 700;
       letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.5);
     }
-    .badge-idle { background: rgba(156, 163, 175, 0.2); color: #9ca3af; border: 1px solid #4b5563; }
-    .badge-case1 { background: rgba(59, 130, 246, 0.25); color: #60a5fa; border: 1px solid #3b82f6; }
-    .badge-alarm { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; animation: pulse 1s infinite; }
-    .badge-flush { background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid #10b981; }
-    .badge-done { background: rgba(139, 92, 246, 0.25); color: #c084fc; border: 1px solid #8b5cf6; }
+    .badge-idle { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid #475569; }
+    .badge-case1 { background: rgba(37, 99, 235, 0.25); color: #93c5fd; border: 1px solid #3b82f6; }
+    .badge-alarm { background: rgba(239, 68, 68, 0.3); color: #fca5a5; border: 1px solid #ef4444; animation: pulse 0.8s infinite; }
+    .badge-flush { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid #10b981; }
+    .badge-done { background: rgba(168, 85, 247, 0.25); color: #d8b4fe; border: 1px solid #a855f7; }
 
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(0.98); } }
 
     .top-actions { display: flex; align-items: center; gap: 10px; }
     .btn {
-      background: rgba(31, 41, 55, 0.8); border: 1px solid var(--border-color); color: var(--text);
-      padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+      background: rgba(30, 41, 59, 0.85); border: 1px solid var(--border-color); color: var(--text);
+      padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;
       display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;
     }
-    .btn:hover { background: rgba(55, 65, 81, 0.9); border-color: var(--primary); }
+    .btn:hover { background: rgba(51, 65, 85, 0.95); border-color: var(--accent); }
     .btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
     .btn-primary:hover { background: var(--primary-hover); }
     .btn-danger { background: rgba(239, 68, 68, 0.2); border-color: var(--danger); color: #fca5a5; }
     .btn-danger:hover { background: var(--danger); color: #fff; }
     .btn-success { background: rgba(16, 185, 129, 0.2); border-color: var(--success); color: #6ee7b7; }
     .btn-success:hover { background: var(--success); color: #fff; }
-    .btn-toggle.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn-toggle.active { background: var(--accent); border-color: var(--accent); color: #0f172a; font-weight: bold; }
 
     /* Switch Component */
-    .switch-container { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
+    .switch-container { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #e2e8f0; }
     .toggle-switch { position: relative; width: 44px; height: 22px; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .slider {
-      position: absolute; cursor: pointer; inset: 0; background: #374151; border-radius: 22px;
-      transition: 0.3s; border: 1px solid rgba(255,255,255,0.1);
+      position: absolute; cursor: pointer; inset: 0; background: #334155; border-radius: 22px;
+      transition: 0.3s; border: 1px solid rgba(255,255,255,0.15);
     }
     .slider:before {
       position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 2px;
       background: white; border-radius: 50%; transition: 0.3s;
     }
-    input:checked + .slider { background: var(--success); }
+    input:checked + .slider { background: var(--success); box-shadow: 0 0 10px rgba(16, 185, 129, 0.6); }
     input:checked + .slider:before { transform: translateX(22px); }
 
     /* Docks */
     .dock {
-      position: absolute; z-index: 10; background: var(--panel-bg); backdrop-filter: blur(12px);
+      position: absolute; z-index: 10; background: var(--panel-bg); backdrop-filter: blur(14px);
       border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;
       max-height: calc(100vh - 80px); overflow-y: auto; font-size: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
     }
     .dock::-webkit-scrollbar { width: 4px; }
-    .dock::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    .dock::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 4px; }
 
-    /* Left Control Dock */
-    #left-dock { top: 68px; left: 16px; width: 330px; }
-    /* Right HUD Dock */
-    #right-dock { top: 68px; right: 16px; width: 340px; }
-    /* Bottom Charts Dock */
+    #left-dock { top: 68px; left: 18px; width: 335px; }
+    #right-dock { top: 68px; right: 18px; width: 345px; }
     #bottom-dock {
-      bottom: 16px; left: 360px; right: 370px; height: 210px;
+      bottom: 16px; left: 370px; right: 380px; height: 215px;
       display: flex; flex-direction: column; padding: 10px 14px;
     }
 
     .section-title {
-      font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.8px;
+      font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.8px;
       color: var(--accent); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
       border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px;
     }
     .control-group { margin-bottom: 12px; }
     .control-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
     .control-slider {
-      width: 100%; height: 5px; -webkit-appearance: none; background: #374151; border-radius: 3px; outline: none;
+      width: 100%; height: 5px; -webkit-appearance: none; background: #334155; border-radius: 3px; outline: none;
     }
     .control-slider::-webkit-slider-thumb {
       -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer;
+      box-shadow: 0 0 8px var(--accent);
     }
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
 
@@ -116,65 +115,78 @@
       background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 6px; padding: 8px; display: flex; flex-direction: column;
     }
-    .metric-card.accent { border-color: rgba(6, 182, 212, 0.3); background: rgba(6, 182, 212, 0.05); }
-    .metric-card.warn { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); }
-    .metric-title { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
-    .metric-value { font-size: 16px; font-weight: 700; color: #fff; font-family: monospace; }
+    .metric-card.accent { border-color: rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.07); }
+    .metric-card.warn { border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.07); }
+    .metric-title { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+    .metric-value { font-size: 16px; font-weight: 800; color: #fff; font-family: monospace; }
     .metric-unit { font-size: 10px; color: var(--text-muted); font-weight: normal; margin-left: 2px; }
 
     .tank-bar-container { margin-bottom: 8px; }
     .tank-bar-header { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
-    .tank-bar-outer { width: 100%; height: 8px; background: #1f2937; border-radius: 4px; overflow: hidden; }
+    .tank-bar-outer { width: 100%; height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); }
     .tank-bar-fill { height: 100%; transition: width 0.1s linear; }
 
     /* Canvas Tabs */
     .tabs-header { display: flex; gap: 6px; margin-bottom: 8px; }
     .tab-btn {
-      background: none; border: none; color: var(--text-muted); font-size: 11px; font-weight: 600;
-      padding: 3px 8px; border-radius: 4px; cursor: pointer;
+      background: none; border: none; color: var(--text-muted); font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: 0.2s;
     }
-    .tab-btn.active { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .tab-btn.active { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
     .canvas-container-box { flex: 1; position: relative; width: 100%; }
-    canvas.chart-canvas { width: 100%; height: 100%; display: block; border-radius: 4px; background: rgba(0,0,0,0.2); }
+    canvas.chart-canvas { width: 100%; height: 100%; display: block; border-radius: 4px; background: rgba(0,0,0,0.3); }
 
     /* Modals */
     .modal-overlay {
-      position: absolute; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+      position: absolute; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
       z-index: 100; display: none; align-items: center; justify-content: center;
     }
     .modal-box {
       background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px;
-      width: 600px; max-width: 90vw; max-height: 85vh; overflow-y: auto; padding: 20px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      width: 620px; max-width: 90vw; max-height: 85vh; overflow-y: auto; padding: 22px;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.7);
     }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .modal-title { font-size: 16px; font-weight: 700; color: #fff; }
-    .close-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+    .modal-title { font-size: 16px; font-weight: 800; color: #fff; }
+    .close-btn { background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; }
     table.data-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
     table.data-table th, table.data-table td { padding: 6px 10px; border: 1px solid rgba(255,255,255,0.08); text-align: left; }
-    table.data-table th { background: rgba(255,255,255,0.04); color: var(--accent); }
+    table.data-table th { background: rgba(255,255,255,0.05); color: var(--accent); }
 
-    /* Tooltip */
-    #tooltip {
-      position: absolute; display: none; background: rgba(17, 24, 39, 0.95);
-      border: 1px solid var(--accent); color: #fff; padding: 6px 10px; border-radius: 4px;
-      font-size: 11px; pointer-events: none; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    /* Camera preset bar */
+    .cam-presets {
+      position: absolute; bottom: 240px; left: 18px; z-index: 10; display: flex; flex-direction: column; gap: 6px;
     }
+    .cam-btn {
+      background: rgba(13, 19, 33, 0.85); border: 1px solid var(--border-color); color: #cbd5e1;
+      padding: 5px 9px; font-size: 10.5px; font-weight: 600; border-radius: 6px; cursor: pointer; backdrop-filter: blur(8px);
+    }
+    .cam-btn:hover { background: var(--accent); color: #0f172a; }
   </style>
 </head>
 <body>
   <div id="canvas-container"></div>
-  <div id="tooltip"></div>
+
+  <!-- Camera Presets -->
+  <div class="cam-presets">
+    <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:bold; margin-bottom:2px;">Camera Views</div>
+    <button class="cam-btn" onclick="setCameraView('iso')">Isometric Rig</button>
+    <button class="cam-btn" onclick="setCameraView('sump')">Sump &amp; LS-01</button>
+    <button class="cam-btn" onclick="setCameraView('pumps')">Pumps &amp; FT-01</button>
+    <button class="cam-btn" onclick="setCameraView('top')">Top P&amp;ID</button>
+  </div>
 
   <!-- Top Bar -->
   <div class="top-bar">
     <div class="brand">
       <div>
-        <div class="brand-title">LAM RESEARCH CHALLENGE 3.0</div>
+        <div class="brand-title">
+          <span style="color:#38bdf8;">◈</span> LAM RESEARCH CHALLENGE 3.0
+        </div>
         <div class="brand-sub">Stage 2 Practical Engineering Digital Twin | TEAM DISTRO (LRC-26-0528)</div>
       </div>
       <div id="statusBadge" class="status-badge badge-idle">
-        <span class="status-dot">●</span> <span id="statusText">IDLE</span>
+        <span>●</span> <span id="statusText">IDLE</span>
       </div>
     </div>
     <div class="top-actions">
@@ -190,7 +202,7 @@
       <button id="residenceModalBtn" class="btn" title="Residence Time Theory">Residence Time</button>
       <button id="exportCsvBtn" class="btn" title="Download Telemetry CSV">Export CSV</button>
       <button id="exportSvgBtn" class="btn" title="Export 2D P&ID Schematic">Export SVG</button>
-      <select id="simSpeedSelect" class="btn" style="background:#1f2937;">
+      <select id="simSpeedSelect" class="btn" style="background:#1e293b;">
         <option value="1">1x Speed</option>
         <option value="2">2x Speed</option>
         <option value="5">5x Speed</option>
@@ -236,11 +248,11 @@
     </div>
 
     <div class="control-group" style="margin-top:10px;">
-      <button id="injectSumpBtn" class="btn btn-danger" style="width:100%; justify-content:center; padding:8px;">
+      <button id="injectSumpBtn" class="btn btn-danger" style="width:100%; justify-content:center; padding:9px; font-size:12px;">
         ⚡ Inject 2.5L External Fluid to Sump
       </button>
       <div style="font-size:10px; color:var(--text-muted); margin-top:3px; text-align:center;">
-        Demonstrates LS-01 high level trip &amp; auto P-01 shutdown
+        Pours external liquid stream &rarr; trips LS-01 float &rarr; halts P-01
       </div>
     </div>
 
@@ -253,7 +265,7 @@
         <option value="SHUTDOWN">Condition D: Pump OFF, Zero Flow</option>
         <option value="CAVITATION">Condition E: Aeration / Intermittent Pulses</option>
       </select>
-      <div id="faultDescription" style="font-size:10px; color:var(--text-muted); background:rgba(0,0,0,0.3); padding:6px; border-radius:4px; line-height:1.4;">
+      <div id="faultDescription" style="font-size:10px; color:var(--text-muted); background:rgba(0,0,0,0.35); padding:6px; border-radius:4px; line-height:1.4;">
         Healthy operating regime at nominal 3 L/min design flow.
       </div>
     </div>
@@ -263,7 +275,7 @@
       <span>Manual Control Mode</span>
       <input type="checkbox" id="manualModeToggle">
     </div>
-    <div id="manualControls" style="opacity:0.4; pointer-events:none; transition:0.2s;">
+    <div id="manualControls" style="opacity:0.35; pointer-events:none; transition:0.2s;">
       <div class="control-group">
         <div class="control-label"><span>Pump-01 (Feed to Sump)</span><span id="p1DutyLabel">50%</span></div>
         <input type="range" id="p1DutySlider" class="control-slider" min="0" max="100" value="50">
@@ -316,7 +328,7 @@
         <span class="metric-value" id="hudRe">0</span>
       </div>
     </div>
-    <div style="margin-bottom:12px; font-size:11px; display:flex; justify-content:space-between; background:rgba(0,0,0,0.25); padding:6px; border-radius:4px;">
+    <div style="margin-bottom:12px; font-size:11px; display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:6px; border-radius:4px;">
       <span style="color:var(--text-muted);">Flow Regime:</span>
       <span id="hudRegime" style="font-weight:bold; color:var(--accent);">LAMINAR</span>
     </div>
@@ -391,11 +403,9 @@
             <th>Actual Q (L/min)</th>
           </tr>
         </thead>
-        <tbody id="calibTableBody">
-          <!-- Filled by JS -->
-        </tbody>
+        <tbody id="calibTableBody"></tbody>
       </table>
-      <div style="background:rgba(0,0,0,0.25); border-radius:6px; padding:12px; margin-bottom:14px; font-size:12px;">
+      <div style="background:rgba(0,0,0,0.3); border-radius:6px; padding:12px; margin-bottom:14px; font-size:12px;">
         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
           <span>Linear Equation Model:</span>
           <b style="color:var(--accent);">Q = a &middot; f + b</b>
@@ -425,7 +435,7 @@
         <p style="margin-bottom:8px;">
           <b>Governing Formula:</b> Physical hydraulic residence time &tau; represents the average fluid transit dead time through a conduit volume:
         </p>
-        <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:6px; text-align:center; font-size:14px; margin-bottom:10px; color:var(--accent); font-weight:bold;">
+        <div style="background:rgba(0,0,0,0.35); padding:10px; border-radius:6px; text-align:center; font-size:14px; margin-bottom:10px; color:var(--accent); font-weight:bold;">
           &tau; = V / Q
         </div>
         <p style="font-size:11px; color:var(--warning); margin-bottom:10px;">
@@ -465,16 +475,13 @@
             </tr>
           </tbody>
         </table>
-        <p style="font-size:11px; color:var(--text-muted);">
-          <b>Significance in Process Control:</b> Residence time sets the pure lag between a upstream chemical injection or valve change and downstream FT-01 confirmation. Understanding &tau; prevents automated PID loops from overshooting or generating false fault trips.
-        </p>
       </div>
     </div>
   </div>
 
   <script>
     /* =========================================================================
-       1. GLOBAL CONFIGURATION & SYSTEM PARAMETERS
+       1. GLOBAL CONFIGURATION & TUNABLE CONSTANTS
        ========================================================================= */
     const CONFIG = {
       pipeDiameter_m: 0.008,          // 8 mm inner diameter
@@ -482,16 +489,16 @@
       fluidDensity_kg_m3: 1000.0,     // 1000 kg/m3 (water)
       dynamicViscosity_Pa_s: 1.0e-3,  // 1e-3 Pa.s
       nomTargetFlow_lpm: 3.0,         // Nominal target: 3.0 L/min
-      qMaxPump_lpm: 6.0,              // 6 L/min max pump capability at 100% duty
+      qMaxPump_lpm: 6.0,              // 6 L/min max pump capacity
       pumpLagTau: 0.5,                // First order pump lag tau in seconds
 
-      // Tank capacities (litres)
+      // Vessel capacities (Litres)
       tk01Capacity: 10.0,
       smp01Capacity: 4.2,
       tk02Capacity: 4.2,
       smpHighLevelTrip: 3.5,          // LS-01 trip threshold in sump (L)
 
-      // Sensor default calibration
+      // Sensor default calibration (Task 2)
       calib_a: 0.12926,               // L/min per Hz
       calib_b: 0.03222,               // offset in L/min
 
@@ -517,18 +524,19 @@
       totalLiters: 0.0,
       totalFlushLiters: 0.0,
 
+      // External fluid injection state
+      injectionActive: false,
+      injectionTimer: 0.0,
+      injectionRateLpm: 0.0,
+
       // Valves
       xv01Open: false,
       bv01Pos: 0.0,                   // Flush line ball valve (0 - 100%)
       bv02Pos: 100.0,                 // Recirculation ball valve (0 - 100%)
 
       // Pumps
-      p1TargetDuty: 0.0,
-      p2TargetDuty: 0.0,
-      p3TargetDuty: 0.0,
-      p1ActualDuty: 0.0,
-      p2ActualDuty: 0.0,
-      p3ActualDuty: 0.0,
+      p1TargetDuty: 0.0, p2TargetDuty: 0.0, p3TargetDuty: 0.0,
+      p1ActualDuty: 0.0, p2ActualDuty: 0.0, p3ActualDuty: 0.0,
 
       // Flows
       flowLpm: 0.0,
@@ -544,8 +552,6 @@
 
       // Fault injection
       faultMode: 'NONE', // NONE, RESTRICTED, SENSOR_FAIL, SHUTDOWN, CAVITATION
-
-      // Manual override
       manualMode: false,
 
       // History logs for charts
@@ -558,54 +564,55 @@
     };
 
     /* =========================================================================
-       3. THREE.JS 3D SCENE & ENGINE SETUP
+       3. PHOTOREALISTIC THREE.JS 3D SCENE & ENGINE SETUP
        ========================================================================= */
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0f1d);
-    scene.fog = new THREE.FogExp2(0x0a0f1d, 0.035);
+    scene.background = new THREE.Color(0x070b16);
+    scene.fog = new THREE.FogExp2(0x070b16, 0.03);
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(0, 4.5, 7.5);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
     container.appendChild(renderer.domElement);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
+    // Realistic Multi-Point Studio Lighting
+    const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x0f172a, 0.7);
+    scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 10, 7);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(6, 12, 8);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 25;
+    dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    const blueSpot = new THREE.PointLight(0x0284c7, 1.2, 10);
-    blueSpot.position.set(-2, 3, 2);
+    // Colored accent illumination
+    const blueSpot = new THREE.PointLight(0x0284c7, 1.8, 12);
+    blueSpot.position.set(-2.5, 3.5, 2);
     scene.add(blueSpot);
 
-    const cyanSpot = new THREE.PointLight(0x06b6d4, 0.8, 10);
-    cyanSpot.position.set(2, 3, 2);
+    const cyanSpot = new THREE.PointLight(0x06b6d4, 1.4, 12);
+    cyanSpot.position.set(2.5, 3.5, 2);
     scene.add(cyanSpot);
 
-    /* ---------------- Custom Orbit Controls ---------------- */
+    /* ---------------- Smooth Orbit Controls ---------------- */
     const orbit = {
-      isDragging: false,
-      isPanning: false,
-      prevMouseX: 0,
-      prevMouseY: 0,
-      target: new THREE.Vector3(0, 1.2, 0),
-      radius: 8.5,
-      theta: 0.1,
-      phi: 1.0,
-      minRadius: 2.0,
-      maxRadius: 18.0
+      isDragging: false, isPanning: false,
+      prevMouseX: 0, prevMouseY: 0,
+      target: new THREE.Vector3(0, 1.1, 0),
+      radius: 8.2, theta: 0.15, phi: 1.05,
+      minRadius: 1.8, maxRadius: 18.0
     };
 
     function updateCameraFromOrbit() {
@@ -621,23 +628,21 @@
       if (e.target.tagName !== 'CANVAS') return;
       if (e.button === 0) orbit.isDragging = true;
       if (e.button === 2) orbit.isPanning = true;
-      orbit.prevMouseX = e.clientX;
-      orbit.prevMouseY = e.clientY;
+      orbit.prevMouseX = e.clientX; orbit.prevMouseY = e.clientY;
     });
 
     window.addEventListener('mousemove', (e) => {
       if (!orbit.isDragging && !orbit.isPanning) return;
       const dx = e.clientX - orbit.prevMouseX;
       const dy = e.clientY - orbit.prevMouseY;
-      orbit.prevMouseX = e.clientX;
-      orbit.prevMouseY = e.clientY;
+      orbit.prevMouseX = e.clientX; orbit.prevMouseY = e.clientY;
 
       if (orbit.isDragging) {
         orbit.theta -= dx * 0.005;
         orbit.phi -= dy * 0.005;
         updateCameraFromOrbit();
       } else if (orbit.isPanning) {
-        const panSpeed = 0.005 * (orbit.radius / 5);
+        const panSpeed = 0.004 * (orbit.radius / 6);
         const forward = new THREE.Vector3().subVectors(orbit.target, camera.position).normalize();
         const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
         orbit.target.addScaledVector(right, -dx * panSpeed);
@@ -654,220 +659,350 @@
       updateCameraFromOrbit();
     }, { passive: true });
 
+    function setCameraView(preset) {
+      if (preset === 'iso') { orbit.target.set(0, 1.1, 0); orbit.radius = 8.2; orbit.theta = 0.15; orbit.phi = 1.05; }
+      else if (preset === 'sump') { orbit.target.set(0.0, 1.0, 0.4); orbit.radius = 3.5; orbit.theta = 0.1; orbit.phi = 1.15; }
+      else if (preset === 'pumps') { orbit.target.set(1.2, 0.9, 0.3); orbit.radius = 3.8; orbit.theta = 0.8; orbit.phi = 1.1; }
+      else if (preset === 'top') { orbit.target.set(0, 0.8, 0); orbit.radius = 7.5; orbit.theta = 0.0; orbit.phi = 0.15; }
+      updateCameraFromOrbit();
+    }
+
     /* =========================================================================
-       4. 3D MODELS CONSTRUCTION (Rig, Tanks, Pumps, Valves, Pipes, Tags)
+       4. PHOTOREALISTIC 3D MODELS CONSTRUCTION
        ========================================================================= */
     const materials = {
-      metalTable: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.8 }),
-      tableSurface: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6, metalness: 0.3 }),
-      glass: new THREE.MeshPhysicalMaterial({
-        color: 0xffffff, transparent: true, opacity: 0.35, roughness: 0.1, transmission: 0.9, thickness: 0.05
+      aluminumExtrusion: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.85 }),
+      breadboardTable: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.6 }),
+      acrylicGlass: new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.38, roughness: 0.08, transmission: 0.92, thickness: 0.08
       }),
-      waterProcess: new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.75, roughness: 0.2 }),
-      waterFlush: new THREE.MeshStandardMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.75, roughness: 0.2 }),
-      pumpBody: new THREE.MeshStandardMaterial({ color: 0x1e3a8a, metalness: 0.6, roughness: 0.4 }),
-      pumpImpeller: new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.2 }),
-      valveBody: new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.7, roughness: 0.3 }),
-      valveLever: new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.5, roughness: 0.3 }),
-      pipeProcess: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3, metalness: 0.2 }),
-      pipeFlush: new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.3, metalness: 0.2 }),
-      pcbBoard: new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 0.5, metalness: 0.3 })
+      waterProcess: new THREE.MeshStandardMaterial({
+        color: 0x0284c7, transparent: true, opacity: 0.78, roughness: 0.15, metalness: 0.1
+      }),
+      waterFlush: new THREE.MeshStandardMaterial({
+        color: 0x06b6d4, transparent: true, opacity: 0.75, roughness: 0.15, metalness: 0.1
+      }),
+      streamFluid: new THREE.MeshStandardMaterial({
+        color: 0x38bdf8, transparent: true, opacity: 0.82, roughness: 0.1
+      }),
+      pumpMotor: new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.35, metalness: 0.8 }),
+      pumpHeadClear: new THREE.MeshPhysicalMaterial({
+        color: 0xe2e8f0, transparent: true, opacity: 0.45, roughness: 0.1, transmission: 0.85
+      }),
+      impellerBlades: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.7 }),
+      brassFitting: new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.85 }),
+      valveLeverRed: new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4, metalness: 0.3 }),
+      valveLeverYellow: new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4, metalness: 0.3 }),
+      tubingBlue: new THREE.MeshPhysicalMaterial({
+        color: 0x0284c7, transparent: true, opacity: 0.6, roughness: 0.25, transmission: 0.6
+      }),
+      tubingGreen: new THREE.MeshPhysicalMaterial({
+        color: 0x059669, transparent: true, opacity: 0.6, roughness: 0.25, transmission: 0.6
+      }),
+      pcbFR4: new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 0.4, metalness: 0.2 }),
+      smpsMesh: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3, metalness: 0.9 })
     };
 
-    // Table Workbench
-    const bench = new THREE.Group();
-    const topMesh = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.1, 3.2), materials.tableSurface);
-    topMesh.position.y = 0.5;
-    topMesh.receiveShadow = true;
-    bench.add(topMesh);
+    // 1. T-Slot Aluminum Workbench Frame
+    const benchGroup = new THREE.Group();
+    const tableTop = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.08, 3.4), materials.breadboardTable);
+    tableTop.position.y = 0.5;
+    tableTop.receiveShadow = true;
+    benchGroup.add(tableTop);
 
-    // Frame legs
-    for (let x of [-3.1, 3.1]) {
-      for (let z of [-1.5, 1.5]) {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.0, 16), materials.metalTable);
-        leg.position.set(x, 0, z);
+    // Structural Aluminum Extrusion rails under table
+    for (let x of [-3.2, 3.2]) {
+      for (let z of [-1.6, 1.6]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.0, 0.08), materials.aluminumExtrusion);
+        leg.position.set(x, 0.0, z);
         leg.castShadow = true;
-        bench.add(leg);
+        benchGroup.add(leg);
       }
     }
-    scene.add(bench);
+    scene.add(benchGroup);
 
-    // Grid Floor
-    const gridHelper = new THREE.GridHelper(20, 20, 0x1e293b, 0x0f172a);
-    gridHelper.position.y = -0.5;
-    scene.add(gridHelper);
+    // Floor Grid
+    const floorGrid = new THREE.GridHelper(24, 24, 0x1e293b, 0x0f172a);
+    floorGrid.position.y = -0.5;
+    scene.add(floorGrid);
 
-    /* ---------------- TANKS ---------------- */
-    // Helper function for tank construction
-    function createTank(name, w, h, d, maxVol, posX, posZ, fluidMat) {
+    /* ---------------- REALISTIC TANKS WITH VOLUME TICKS ---------------- */
+    function createRealisticTank(name, w, h, d, maxVol, posX, posZ, fluidMat, isCylinder = false) {
       const group = new THREE.Group();
-      group.position.set(posX, 0.55, posZ);
+      group.position.set(posX, 0.54, posZ);
 
-      // Glass Enclosure
-      const tankGeo = new THREE.BoxGeometry(w, h, d);
-      const tankMesh = new THREE.Mesh(tankGeo, materials.glass);
-      tankMesh.position.y = h / 2;
-      group.add(tankMesh);
+      let tankMesh, fluidMesh;
 
-      // Liquid Box inside
-      const fluidGeo = new THREE.BoxGeometry(w * 0.95, h * 0.95, d * 0.95);
-      const fluidMesh = new THREE.Mesh(fluidGeo, fluidMat);
-      fluidMesh.position.y = (h * 0.95) / 2;
-      group.add(fluidMesh);
+      if (isCylinder) {
+        // Cylindrical tank for 10L TK-01
+        tankMesh = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, w / 2, h, 36), materials.acrylicGlass);
+        tankMesh.position.y = h / 2;
+        group.add(tankMesh);
 
-      // Metal base rim
-      const rim = new THREE.Mesh(new THREE.BoxGeometry(w * 1.05, 0.04, d * 1.05), materials.metalTable);
-      rim.position.y = 0.02;
-      group.add(rim);
+        fluidMesh = new THREE.Mesh(new THREE.CylinderGeometry((w / 2) * 0.96, (w / 2) * 0.96, h * 0.95, 36), fluidMat);
+        fluidMesh.position.y = (h * 0.95) / 2;
+        group.add(fluidMesh);
+
+        // Flanged Stainless Steel Lids
+        const bottomFlange = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.55, w * 0.55, 0.03, 36), materials.aluminumExtrusion);
+        bottomFlange.position.y = 0.015;
+        group.add(bottomFlange);
+
+        const topFlange = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.55, w * 0.55, 0.03, 36), materials.aluminumExtrusion);
+        topFlange.position.y = h;
+        group.add(topFlange);
+      } else {
+        // Rectangular vessel for Sump & Flush
+        tankMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), materials.acrylicGlass);
+        tankMesh.position.y = h / 2;
+        group.add(tankMesh);
+
+        fluidMesh = new THREE.Mesh(new THREE.BoxGeometry(w * 0.96, h * 0.95, d * 0.96), fluidMat);
+        fluidMesh.position.y = (h * 0.95) / 2;
+        group.add(fluidMesh);
+
+        // Base plate and top frame
+        const rim = new THREE.Mesh(new THREE.BoxGeometry(w * 1.05, 0.03, d * 1.05), materials.aluminumExtrusion);
+        rim.position.y = 0.015;
+        group.add(rim);
+
+        const topRim = new THREE.Mesh(new THREE.BoxGeometry(w * 1.05, 0.03, d * 1.05), materials.aluminumExtrusion);
+        topRim.position.y = h;
+        group.add(topRim);
+      }
+
+      // Volume Graduations on tank face
+      for (let i = 1; i <= 5; i++) {
+        const tick = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.005, 0.01), new THREE.MeshBasicMaterial({ color: 0x94a3b8 }));
+        tick.position.set(isCylinder ? w * 0.51 : w * 0.49, (h / 6) * i, 0);
+        group.add(tick);
+      }
 
       scene.add(group);
-      return { group, tankMesh, fluidMesh, maxVol, h, w, d };
+      return { group, tankMesh, fluidMesh, maxVol, h, w, d, isCylinder };
     }
 
-    // 1. TK-01: 10L Process Tank (Left rear)
-    const tk01Obj = createTank('TK-01', 0.9, 1.6, 0.9, 10.0, -2.2, -0.6, materials.waterProcess);
+    const tk01Obj = createRealisticTank('TK-01', 0.95, 1.6, 0.95, 10.0, -2.2, -0.6, materials.waterProcess, true);
+    const smp01Obj = createRealisticTank('SMP-01', 0.85, 1.1, 0.85, 4.2, 0.0, 0.4, materials.waterProcess, false);
+    const tk02Obj = createRealisticTank('TK-02', 0.85, 1.1, 0.85, 4.2, -2.2, 0.75, materials.waterFlush, false);
 
-    // 2. SMP-01: 4.2L Sump (Center front)
-    const smp01Obj = createTank('SMP-01', 0.8, 1.1, 0.8, 4.2, 0.0, 0.4, materials.waterProcess);
+    // LS-01 Float Switch Assembly in SMP-01
+    const floatAssembly = new THREE.Group();
+    floatAssembly.position.set(0.0, 0.54 + 0.95, 0.4);
+    const floatGuideRod = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.9, 16), materials.aluminumExtrusion);
+    floatAssembly.add(floatGuideRod);
 
-    // Float Switch LS-01 in Sump
-    const floatGroup = new THREE.Group();
-    floatGroup.position.set(0.0, 0.55 + 0.9, 0.4);
-    const floatStem = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.8, 16), materials.metalTable);
-    floatGroup.add(floatStem);
-    const floatBob = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 24), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-    floatBob.position.y = 0.0;
-    floatGroup.add(floatBob);
-    scene.add(floatGroup);
+    // Toroidal magnetic float that rides on water surface
+    const floatRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.06, 0.025, 16, 32),
+      new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3, metalness: 0.6 })
+    );
+    floatRing.rotation.x = Math.PI / 2;
+    floatRing.position.y = 0.0;
+    floatAssembly.add(floatRing);
+    scene.add(floatAssembly);
 
-    // 3. TK-02: 4.2L Flush Fluid Tank (Left front)
-    const tk02Obj = createTank('TK-02', 0.8, 1.1, 0.8, 4.2, -2.2, 0.7, materials.waterFlush);
-
-    /* ---------------- PUMPS ---------------- */
+    /* ---------------- REALISTIC DETAILED PUMPS ---------------- */
     const pumps = {};
-    function createPump(id, posX, posZ, rotY = 0) {
+    function createDetailedPump(id, posX, posZ, rotY = 0) {
       const group = new THREE.Group();
-      group.position.set(posX, 0.7, posZ);
+      group.position.set(posX, 0.72, posZ);
       group.rotation.y = rotY;
 
-      // Motor cylinder
-      const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.35, 24), materials.pumpBody);
-      motor.rotation.z = Math.PI / 2;
-      group.add(motor);
+      // DC Motor Shell with cooling fins
+      const motorCan = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.38, 24), materials.pumpMotor);
+      motorCan.rotation.z = Math.PI / 2;
+      group.add(motorCan);
 
-      // Volute head
-      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 24), materials.glass);
-      head.rotation.z = Math.PI / 2;
-      head.position.x = 0.22;
-      group.add(head);
+      // Transparent Acrylic Volute Head
+      const volute = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.12, 24), materials.pumpHeadClear);
+      volute.rotation.z = Math.PI / 2;
+      volute.position.x = 0.24;
+      group.add(volute);
 
-      // Impeller inside
+      // Swirling Water Vortex Mesh inside Volute
+      const swirlWater = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.15, 0.1, 24),
+        new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45, roughness: 0.1 })
+      );
+      swirlWater.rotation.z = Math.PI / 2;
+      swirlWater.position.x = 0.24;
+      group.add(swirlWater);
+
+      // 6-Blade Precision Impeller
       const impellerGroup = new THREE.Group();
-      impellerGroup.position.x = 0.22;
-      for (let i = 0; i < 4; i++) {
-        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.02), materials.pumpImpeller);
-        blade.rotation.x = (i * Math.PI) / 4;
+      impellerGroup.position.x = 0.24;
+      for (let i = 0; i < 6; i++) {
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.13, 0.025), materials.impellerBlades);
+        blade.rotation.x = (i * Math.PI) / 3;
         impellerGroup.add(blade);
       }
       group.add(impellerGroup);
 
-      // Mounting bracket
-      const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.25), materials.metalTable);
-      bracket.position.y = -0.1;
-      group.add(bracket);
+      // Push-in Fittings (10mm x 8mm Brass Reducer + Blue Collet)
+      const suctionFitting = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 16), materials.brassFitting);
+      suctionFitting.position.set(0.24, 0.0, -0.16);
+      suctionFitting.rotation.x = Math.PI / 2;
+      group.add(suctionFitting);
+
+      const dischargeFitting = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 16), materials.brassFitting);
+      dischargeFitting.position.set(0.24, 0.16, 0.0);
+      group.add(dischargeFitting);
+
+      // Heavy Duty Metal Foot Base
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.26), materials.aluminumExtrusion);
+      foot.position.y = -0.11;
+      group.add(foot);
 
       scene.add(group);
-      pumps[id] = { group, impellerGroup, rotSpeed: 0 };
+      pumps[id] = { group, impellerGroup, swirlWater, rotSpeed: 0 };
       return pumps[id];
     }
 
-    createPump('P-01', -0.9, -0.6, 0);       // P-01: Recirculation feed pump
-    createPump('P-02', 1.0, 0.4, Math.PI);    // P-02: Sump return pump
-    createPump('P-03', -0.9, 0.7, 0);        // P-03: Flush supply pump
+    createDetailedPump('P-01', -0.9, -0.6, 0);
+    createDetailedPump('P-02', 1.05, 0.4, Math.PI);
+    createDetailedPump('P-03', -0.9, 0.75, 0);
 
-    /* ---------------- VALVES ---------------- */
-    // XV-01 Solenoid Valve
+    /* ---------------- DETAILED VALVES & ACTUATORS ---------------- */
+    // Solenoid Valve XV-01 (12V Industrial Solenoid)
     const xv01Group = new THREE.Group();
-    xv01Group.position.set(-1.6, 0.7, -0.6);
-    const xvBody = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.14), materials.valveBody);
+    xv01Group.position.set(-1.6, 0.72, -0.6);
+    const xvBody = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.14), materials.brassFitting);
     xv01Group.add(xvBody);
-    const xvCoil = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
-    xvCoil.position.y = 0.16;
+    const xvCoil = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.22, 20), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 }));
+    xvCoil.position.y = 0.17;
     xv01Group.add(xvCoil);
-    const xvLed = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 16), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
-    xvLed.position.set(0, 0.28, 0);
+    // Solenoid State Indicator LED
+    const xvLed = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 16), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    xvLed.position.set(0, 0.3, 0);
     xv01Group.add(xvLed);
     scene.add(xv01Group);
 
-    // BV-01 Manual Ball Valve (Flush line)
-    const bv01Group = new THREE.Group();
-    bv01Group.position.set(-1.6, 0.7, 0.7);
-    const bv01Body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), materials.valveBody);
-    bv01Group.add(bv01Body);
-    const bv01Stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.08, 12), materials.metalTable);
-    bv01Stem.position.y = 0.09;
-    bv01Group.add(bv01Stem);
-    const bv01Lever = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.04), materials.valveLever);
-    bv01Lever.position.set(0.1, 0.13, 0);
-    bv01Group.add(bv01Lever);
-    scene.add(bv01Group);
+    // Ball Valves BV-01 & BV-02 with Realistic Levers
+    function createBallValve(posX, posZ, leverMat) {
+      const group = new THREE.Group();
+      group.position.set(posX, 0.72, posZ);
 
-    // BV-02 Throttle Ball Valve (Recirculation line)
-    const bv02Group = new THREE.Group();
-    bv02Group.position.set(1.7, 0.7, 0.4);
-    const bv02Body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), materials.valveBody);
-    bv02Group.add(bv02Body);
-    const bv02Lever = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.04), materials.valveLever);
-    bv02Lever.position.set(0.1, 0.13, 0);
-    bv02Group.add(bv02Lever);
-    scene.add(bv02Group);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), materials.brassFitting);
+      group.add(body);
 
-    /* ---------------- FLOW TRANSMITTER FT-01 ---------------- */
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.09, 12), materials.aluminumExtrusion);
+      stem.position.y = 0.09;
+      group.add(stem);
+
+      const lever = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.022, 0.04), leverMat);
+      lever.position.set(0.11, 0.14, 0);
+      group.add(lever);
+
+      scene.add(group);
+      return { group, lever };
+    }
+
+    const bv01Obj = createBallValve(-1.6, 0.75, materials.valveLeverYellow);
+    const bv02Obj = createBallValve(1.75, 0.4, materials.valveLeverRed);
+
+    /* ---------------- HIGH-PRECISION FLOW TRANSMITTER FT-01 ---------------- */
     const ft01Group = new THREE.Group();
-    ft01Group.position.set(2.2, 0.7, -0.1);
-    const ftBody = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.16, 24), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+    ft01Group.position.set(2.25, 0.72, -0.1);
+    const ftBody = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.16, 24), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 }));
     ft01Group.add(ftBody);
-    const ftLens = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.17, 24), materials.glass);
-    ft01Group.add(ftLens);
-    const ftTurbine = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.08, 0.08), materials.pumpImpeller);
+    const ftWindow = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.17, 24), materials.acrylicGlass);
+    ft01Group.add(ftWindow);
+    const ftTurbine = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.085, 0.085), materials.impellerBlades);
     ft01Group.add(ftTurbine);
     const ftPulseLed = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 12), new THREE.MeshBasicMaterial({ color: 0x000000 }));
     ftPulseLed.position.set(0, 0.11, 0);
     ft01Group.add(ftPulseLed);
     scene.add(ft01Group);
 
-    /* ---------------- ELECTRONIC CONTROLLER (ESP32 + PCB + SMPS) ---------------- */
-    const pcbGroup = new THREE.Group();
-    pcbGroup.position.set(1.8, 0.9, -1.0);
-    pcbGroup.rotation.x = -Math.PI / 6;
+    /* ---------------- ELECTRONICS: ESP32 PCB + 12V SMPS ---------------- */
+    const elecGroup = new THREE.Group();
+    elecGroup.position.set(1.9, 0.95, -1.0);
+    elecGroup.rotation.x = -Math.PI / 6;
 
-    const pcbBoard = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 0.7), materials.pcbBoard);
-    pcbGroup.add(pcbBoard);
+    // Perforated 12V SMPS Enclosure
+    const smpsBox = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.22, 0.65), materials.smpsMesh);
+    smpsBox.position.set(-0.35, 0.11, 0);
+    elecGroup.add(smpsBox);
 
-    // ESP32 module
-    const esp32 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.04, 0.45), new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 }));
-    esp32.position.set(-0.25, 0.03, 0);
-    pcbGroup.add(esp32);
+    // Green FR4 Custom PCB
+    const pcb = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.02, 0.65), materials.pcbFR4);
+    pcb.position.set(0.25, 0.02, 0);
+    elecGroup.add(pcb);
 
-    // Motor driver chips
-    for (let i = 0; i < 3; i++) {
-      const drv = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.03, 0.12), new THREE.MeshStandardMaterial({ color: 0xd97706 }));
-      drv.position.set(0.15 + i * 0.12, 0.025, -0.15 + i * 0.15);
-      pcbGroup.add(drv);
+    // ESP32 Microcontroller Module with RF Metal Shield
+    const esp32Mesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.035, 0.38), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9 }));
+    esp32Mesh.position.set(0.18, 0.045, -0.08);
+    elecGroup.add(esp32Mesh);
+
+    scene.add(elecGroup);
+
+    /* ---------------- REAL-TIME WATER FLOW JETS & CASCADES ---------------- */
+    // 1. Water stream pouring from P-01 into Sump-01
+    const p1StreamGeo = new THREE.CylinderGeometry(0.02, 0.035, 0.45, 16);
+    const p1StreamMesh = new THREE.Mesh(p1StreamGeo, materials.streamFluid);
+    p1StreamMesh.position.set(0.0, 0.54 + 0.85, 0.4);
+    p1StreamMesh.visible = false;
+    scene.add(p1StreamMesh);
+
+    // Splash particle ring on Sump water surface
+    const splashCount = 35;
+    const splashGeo = new THREE.BufferGeometry();
+    const splashPos = new Float32Array(splashCount * 3);
+    const splashVel = [];
+    for (let i = 0; i < splashCount; i++) {
+      splashPos[i * 3] = 0.0;
+      splashPos[i * 3 + 1] = 0.54 + 0.6;
+      splashPos[i * 3 + 2] = 0.4;
+      splashVel.push({
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: 0.2 + Math.random() * 0.5,
+        vz: (Math.random() - 0.5) * 0.4,
+        life: Math.random()
+      });
     }
-    scene.add(pcbGroup);
+    splashGeo.setAttribute('position', new THREE.BufferAttribute(splashPos, 3));
+    const splashParticles = new THREE.Points(
+      splashGeo,
+      new THREE.PointsMaterial({ color: 0xbae6fd, size: 0.04, transparent: true, opacity: 0.85 })
+    );
+    splashParticles.visible = false;
+    scene.add(splashParticles);
 
-    /* ---------------- PIPING NETWORK & PARTICLES ---------------- */
+    // 2. Heavy External Injection Stream (Cascading into Sump from funnel above)
+    const extStreamGeo = new THREE.CylinderGeometry(0.04, 0.07, 0.8, 16);
+    const extStreamMesh = new THREE.Mesh(
+      extStreamGeo,
+      new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.88, roughness: 0.1 })
+    );
+    extStreamMesh.position.set(0.0, 1.6, 0.4);
+    extStreamMesh.visible = false;
+    scene.add(extStreamMesh);
+
+    // Overhead Injection Funnel
+    const funnel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.05, 0.22, 24),
+      new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.4, metalness: 0.3 })
+    );
+    funnel.position.set(0.0, 2.1, 0.4);
+    scene.add(funnel);
+
+    // 3. Return line stream into 10L Tank (from FT-01 discharge)
+    const returnStreamGeo = new THREE.CylinderGeometry(0.02, 0.035, 0.5, 16);
+    const returnStreamMesh = new THREE.Mesh(returnStreamGeo, materials.streamFluid);
+    returnStreamMesh.position.set(-2.2, 0.54 + 1.25, -0.6);
+    returnStreamMesh.visible = false;
+    scene.add(returnStreamMesh);
+
+    /* ---------------- TUBING PIPELINES & INTERNAL LIQUID CORE ---------------- */
     const pipes = [];
-    const particleSystems = [];
-
-    function createPipe(points, mat, particleCount = 20) {
+    function createPipeline(points, mat, particleCount = 28) {
       const curve = new THREE.CatmullRomCurve3(points);
-      const geo = new THREE.TubeGeometry(curve, 32, 0.022, 12, false);
-      const mesh = new THREE.Mesh(geo, mat);
-      scene.add(mesh);
+      const outerGeo = new THREE.TubeGeometry(curve, 40, 0.024, 14, false);
+      const outerTube = new THREE.Mesh(outerGeo, mat);
+      scene.add(outerTube);
 
-      // Particle system for animated fluid flow
+      // Flowing water particles / micro-bubbles inside the tube
       const partGeo = new THREE.BufferGeometry();
       const positions = new Float32Array(particleCount * 3);
       const uProgress = new Float32Array(particleCount);
@@ -879,196 +1014,162 @@
         positions[i * 3 + 2] = pt.z;
       }
       partGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      const partMat = new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.06, transparent: true, opacity: 0.85 });
+      const partMat = new THREE.PointsMaterial({ color: 0xbae6fd, size: 0.055, transparent: true, opacity: 0.9 });
       const pSystem = new THREE.Points(partGeo, partMat);
       scene.add(pSystem);
 
-      const item = { curve, mesh, pSystem, uProgress, particleCount, active: false, speed: 0 };
+      const item = { curve, outerTube, pSystem, uProgress, particleCount, active: false };
       pipes.push(item);
       return item;
     }
 
-    // 1. Line TK-01 -> XV-01 -> T-01
-    const pLineRecircIn = createPipe([
-      new THREE.Vector3(-1.75, 0.7, -0.6),
-      new THREE.Vector3(-1.6, 0.7, -0.6),
-      new THREE.Vector3(-1.25, 0.7, -0.6),
-      new THREE.Vector3(-0.9, 0.7, -0.6)
-    ], materials.pipeProcess, 25);
+    // Pipeline Branches
+    const pLineRecircIn = createPipeline([
+      new THREE.Vector3(-1.75, 0.72, -0.6), new THREE.Vector3(-1.6, 0.72, -0.6),
+      new THREE.Vector3(-1.25, 0.72, -0.6), new THREE.Vector3(-0.9, 0.72, -0.6)
+    ], materials.tubingBlue, 30);
 
-    // 2. Line TK-02 -> BV-01 -> P-03
-    const pLineFlushFeed = createPipe([
-      new THREE.Vector3(-1.8, 0.7, 0.7),
-      new THREE.Vector3(-1.6, 0.7, 0.7),
-      new THREE.Vector3(-1.2, 0.7, 0.7),
-      new THREE.Vector3(-0.9, 0.7, 0.7)
-    ], materials.pipeFlush, 25);
+    const pLineFlushFeed = createPipeline([
+      new THREE.Vector3(-1.8, 0.72, 0.75), new THREE.Vector3(-1.6, 0.72, 0.75),
+      new THREE.Vector3(-1.2, 0.72, 0.75), new THREE.Vector3(-0.9, 0.72, 0.75)
+    ], materials.tubingGreen, 30);
 
-    // 3. Line P-03 -> T-01 (Joining line ahead of P-01)
-    const pLineFlushJoin = createPipe([
-      new THREE.Vector3(-0.7, 0.7, 0.7),
-      new THREE.Vector3(-0.4, 0.7, 0.7),
-      new THREE.Vector3(-0.4, 0.85, 0.0),
-      new THREE.Vector3(-0.4, 0.7, -0.6),
-      new THREE.Vector3(-0.7, 0.7, -0.6)
-    ], materials.pipeFlush, 30);
+    const pLineFlushJoin = createPipeline([
+      new THREE.Vector3(-0.7, 0.72, 0.75), new THREE.Vector3(-0.4, 0.72, 0.75),
+      new THREE.Vector3(-0.4, 0.88, 0.0), new THREE.Vector3(-0.4, 0.72, -0.6),
+      new THREE.Vector3(-0.7, 0.72, -0.6)
+    ], materials.tubingGreen, 36);
 
-    // 4. Line P-01 -> SMP-01 Sump Inlet
-    const pLineP1ToSump = createPipe([
-      new THREE.Vector3(-0.7, 0.7, -0.6),
-      new THREE.Vector3(-0.2, 0.7, -0.6),
-      new THREE.Vector3(-0.2, 1.1, 0.2),
-      new THREE.Vector3(0.0, 1.1, 0.4)
-    ], materials.pipeProcess, 30);
+    const pLineP1ToSump = createPipeline([
+      new THREE.Vector3(-0.7, 0.72, -0.6), new THREE.Vector3(-0.2, 0.72, -0.6),
+      new THREE.Vector3(-0.2, 1.15, 0.2), new THREE.Vector3(0.0, 1.15, 0.4)
+    ], materials.tubingBlue, 36);
 
-    // 5. Line Sump Outlet -> P-02 -> BV-02 -> FT-01
-    const pLineSumpToFt = createPipe([
-      new THREE.Vector3(0.4, 0.65, 0.4),
-      new THREE.Vector3(1.0, 0.65, 0.4),
-      new THREE.Vector3(1.7, 0.7, 0.4),
-      new THREE.Vector3(2.2, 0.7, 0.2),
-      new THREE.Vector3(2.2, 0.7, -0.1)
-    ], materials.pipeProcess, 35);
+    const pLineSumpToFt = createPipeline([
+      new THREE.Vector3(0.42, 0.68, 0.4), new THREE.Vector3(1.05, 0.68, 0.4),
+      new THREE.Vector3(1.75, 0.72, 0.4), new THREE.Vector3(2.25, 0.72, 0.2),
+      new THREE.Vector3(2.25, 0.72, -0.1)
+    ], materials.tubingBlue, 42);
 
-    // 6. Return Line FT-01 -> TK-01
-    const pLineFtToTk01 = createPipe([
-      new THREE.Vector3(2.2, 0.7, -0.1),
-      new THREE.Vector3(2.2, 1.4, -0.6),
-      new THREE.Vector3(0.0, 1.4, -0.6),
-      new THREE.Vector3(-1.8, 1.4, -0.6),
-      new THREE.Vector3(-2.2, 1.4, -0.6)
-    ], materials.pipeProcess, 45);
+    const pLineFtToTk01 = createPipeline([
+      new THREE.Vector3(2.25, 0.72, -0.1), new THREE.Vector3(2.25, 1.5, -0.6),
+      new THREE.Vector3(0.0, 1.5, -0.6), new THREE.Vector3(-1.8, 1.5, -0.6),
+      new THREE.Vector3(-2.2, 1.5, -0.6)
+    ], materials.tubingBlue, 50);
 
-    /* ---------------- BILLBOARD P&ID LABELS ---------------- */
+    /* ---------------- P&ID INSTRUMENT TAGS ---------------- */
     const pidLabels = [];
     function createPidLabel(text, worldPos) {
       const canvas = document.createElement('canvas');
-      canvas.width = 128;
-      canvas.height = 48;
+      canvas.width = 136; canvas.height = 50;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-      ctx.strokeStyle = '#38bdf8';
+      ctx.fillStyle = 'rgba(7, 10, 19, 0.92)';
+      ctx.strokeStyle = '#06b6d4';
       ctx.lineWidth = 3;
-      ctx.roundRect(2, 2, 124, 44, 8);
-      ctx.fill();
-      ctx.stroke();
+      ctx.roundRect(2, 2, 132, 46, 8);
+      ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, 64, 24);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, 68, 25);
 
       const texture = new THREE.CanvasTexture(canvas);
       const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false });
       const sprite = new THREE.Sprite(spriteMat);
       sprite.position.copy(worldPos);
-      sprite.scale.set(0.6, 0.22, 1);
+      sprite.scale.set(0.65, 0.24, 1);
       sprite.visible = false;
       scene.add(sprite);
       pidLabels.push(sprite);
       return sprite;
     }
 
-    createPidLabel('TK-01 (10L)', new THREE.Vector3(-2.2, 1.7, -0.6));
-    createPidLabel('SMP-01 (4.2L)', new THREE.Vector3(0.0, 1.35, 0.4));
-    createPidLabel('TK-02 (4.2L)', new THREE.Vector3(-2.2, 1.35, 0.7));
-    createPidLabel('P-01', new THREE.Vector3(-0.9, 1.0, -0.6));
-    createPidLabel('P-02', new THREE.Vector3(1.0, 1.0, 0.4));
-    createPidLabel('P-03', new THREE.Vector3(-0.9, 1.0, 0.7));
-    createPidLabel('XV-01', new THREE.Vector3(-1.6, 1.05, -0.6));
-    createPidLabel('BV-01', new THREE.Vector3(-1.6, 0.95, 0.7));
-    createPidLabel('BV-02', new THREE.Vector3(1.7, 0.95, 0.4));
-    createPidLabel('FT-01', new THREE.Vector3(2.2, 1.0, -0.1));
-    createPidLabel('LS-01', new THREE.Vector3(0.0, 1.6, 0.4));
-    createPidLabel('T-01 (Tee)', new THREE.Vector3(-0.4, 0.95, -0.6));
+    createPidLabel('TK-01 (10L)', new THREE.Vector3(-2.2, 1.8, -0.6));
+    createPidLabel('SMP-01 (4.2L)', new THREE.Vector3(0.0, 1.45, 0.4));
+    createPidLabel('TK-02 (4.2L)', new THREE.Vector3(-2.2, 1.45, 0.75));
+    createPidLabel('P-01', new THREE.Vector3(-0.9, 1.05, -0.6));
+    createPidLabel('P-02', new THREE.Vector3(1.05, 1.05, 0.4));
+    createPidLabel('P-03', new THREE.Vector3(-0.9, 1.05, 0.75));
+    createPidLabel('XV-01', new THREE.Vector3(-1.6, 1.15, -0.6));
+    createPidLabel('BV-01', new THREE.Vector3(-1.6, 1.05, 0.75));
+    createPidLabel('BV-02', new THREE.Vector3(1.75, 1.05, 0.4));
+    createPidLabel('FT-01', new THREE.Vector3(2.25, 1.05, -0.1));
+    createPidLabel('LS-01', new THREE.Vector3(0.0, 1.65, 0.4));
+    createPidLabel('T-01 (Tee)', new THREE.Vector3(-0.4, 1.05, -0.6));
 
     /* =========================================================================
-       5. SIMULATION PHYSICS & MASS BALANCE ENGINE
+       5. PHYSICAL MASS BALANCE & HYDRAULIC SIMULATION ENGINE
        ========================================================================= */
     function updatePhysics(dt) {
       if (!state.powerOn) {
         state.fsmState = 'IDLE';
-        state.p1TargetDuty = 0;
-        state.p2TargetDuty = 0;
-        state.p3TargetDuty = 0;
+        state.p1TargetDuty = 0; state.p2TargetDuty = 0; state.p3TargetDuty = 0;
         state.xv01Open = false;
       }
 
-      // Valve Factor Model (Ball valve characteristic)
-      // Quadratic flow fraction: Kv = (pos / 100)^2
+      // Valve characteristics (quadratic equal-percentage)
       const bv02Factor = Math.pow(state.bv02Pos / 100.0, 1.8);
       const bv01Factor = Math.pow(state.bv01Pos / 100.0, 1.8);
 
-      // Lag dynamics on pumps (1st order response)
+      // First-order pump motor inertia lag
       const lagAlpha = dt / (CONFIG.pumpLagTau + dt);
       state.p1ActualDuty += (state.p1TargetDuty - state.p1ActualDuty) * lagAlpha;
       state.p2ActualDuty += (state.p2TargetDuty - state.p2ActualDuty) * lagAlpha;
       state.p3ActualDuty += (state.p3TargetDuty - state.p3ActualDuty) * lagAlpha;
 
-      // Sump Level Switch LS-01 with debouncing
+      // Handle External Fluid Injection (2.5L over 5s = 30 L/min)
+      if (state.injectionActive) {
+        state.injectionTimer += dt;
+        const injectedThisStep = (30.0 / 60.0) * dt; // 0.5 L/s
+        state.smp01Vol = Math.min(CONFIG.smp01Capacity, state.smp01Vol + injectedThisStep);
+        if (state.injectionTimer >= 5.0) {
+          state.injectionActive = false;
+          state.injectionTimer = 0.0;
+        }
+      }
+
+      // Sump Level Float Switch LS-01 with 300ms Debouncing
       const rawFloatHigh = (state.smp01Vol >= CONFIG.smpHighLevelTrip);
       if (rawFloatHigh) {
         state.ls01DebounceTimer += dt;
-        if (state.ls01DebounceTimer >= (CONFIG.debounceMs / 1000.0)) {
-          state.ls01High = true;
-        }
+        if (state.ls01DebounceTimer >= (CONFIG.debounceMs / 1000.0)) state.ls01High = true;
       } else {
         state.ls01DebounceTimer = 0.0;
         state.ls01High = false;
       }
 
-      // Finite State Machine (FSM)
+      // ESP32 Firmware State Machine Engine
       if (state.powerOn && !state.manualMode) {
         state.fsmTimer += dt;
-
         switch (state.fsmState) {
-          case 'IDLE':
-            // Awaiting start
-            break;
-
           case 'CASE1':
             state.xv01Open = true;
             state.p3TargetDuty = 0.0;
 
-            // Recirculation duties
             if (state.ls01High) {
-              // Level protection interlock: STOP PUMP 1, KEEP PUMP 2 RUNNING!
+              // Level Protection Trip: Immediately stop Pump 1, keep Pump 2 @ 100%
               state.fsmState = 'CASE1_ALARM';
             } else {
               state.p1TargetDuty = 0.50; // 50% PWM Duty
               state.p2TargetDuty = 1.00; // 100% PWM Duty
             }
-
-            // Auto-advance to flush after case 1 time limit
-            if (state.fsmTimer >= CONFIG.case1Duration) {
-              triggerCase2Flush();
-            }
+            if (state.fsmTimer >= CONFIG.case1Duration) triggerCase2Flush();
             break;
 
           case 'CASE1_ALARM':
             state.xv01Open = true;
             state.p1TargetDuty = 0.0; // Cut off P1
-            state.p2TargetDuty = 1.0; // P2 evacuates surcharge
-            if (!state.ls01High) {
-              // Level recovered below threshold
-              state.fsmState = 'CASE1';
-            }
+            state.p2TargetDuty = 1.0; // Evacuate sump
+            if (!state.ls01High) state.fsmState = 'CASE1'; // Auto-recovery
             break;
 
           case 'FLUSH':
             state.xv01Open = false; // Isolate TK-01
             state.p3TargetDuty = 1.0; // Flush water feed
-
-            if (state.ls01High) {
-              state.p1TargetDuty = 0.0;
-            } else {
-              state.p1TargetDuty = 0.5;
-            }
+            state.p1TargetDuty = state.ls01High ? 0.0 : 0.5;
             state.p2TargetDuty = 1.0;
 
-            // Flush stop conditions
-            // 1. Flush volume depleted (>= 4.2L)
-            // 2. Or zero flow for > 4s after 8s settle time
+            // Auto shutdown conditions
             if (state.totalFlushLiters >= CONFIG.tk02Capacity || state.tk02Vol <= 0.02) {
               state.fsmState = 'DONE';
             } else if (state.fsmTimer > 8.0 && state.flowLpm < 0.3) {
@@ -1077,52 +1178,38 @@
             break;
 
           case 'DONE':
-            state.p1TargetDuty = 0.0;
-            state.p2TargetDuty = 0.0;
-            state.p3TargetDuty = 0.0;
+            state.p1TargetDuty = 0.0; state.p2TargetDuty = 0.0; state.p3TargetDuty = 0.0;
             state.xv01Open = false;
             break;
         }
       }
 
-      // Hydraulic Flow Rate Calculation
+      // Hydraulic Flow Calculation
       let qRaw = 0.0;
       if (state.fsmState === 'FLUSH') {
-        // Flush line active: depends on BV-01 manual opening & TK-02 fluid
         if (state.tk02Vol > 0.01) {
           qRaw = CONFIG.qMaxPump_lpm * state.p3ActualDuty * bv01Factor * bv02Factor;
-        } else {
-          qRaw = 0.0; // TK-02 dry
         }
       } else {
-        // Case 1 Recirculation line active
         if (state.smp01Vol > 0.01) {
           qRaw = CONFIG.qMaxPump_lpm * state.p2ActualDuty * bv02Factor * 0.65;
-        } else {
-          qRaw = 0.0; // Sump dry
         }
       }
 
       // Fault Injections (Task 3: Q3.2)
       let qEffective = qRaw;
       let pulseMultiplier = 1.0;
-
-      if (state.faultMode === 'RESTRICTED') {
-        qEffective *= 0.45; // Partial obstruction
-      } else if (state.faultMode === 'SENSOR_FAIL') {
-        pulseMultiplier = 0.0; // Fluid flows, but sensor produces 0 pulses!
-      } else if (state.faultMode === 'SHUTDOWN') {
+      if (state.faultMode === 'RESTRICTED') qEffective *= 0.45;
+      else if (state.faultMode === 'SENSOR_FAIL') pulseMultiplier = 0.0;
+      else if (state.faultMode === 'SHUTDOWN') {
         state.p1TargetDuty = 0; state.p2TargetDuty = 0; state.p3TargetDuty = 0;
         qEffective = 0;
       } else if (state.faultMode === 'CAVITATION') {
-        qEffective *= (0.7 + 0.3 * Math.sin(state.totalElapsed * 15.0));
-        pulseMultiplier = (Math.random() > 0.35) ? 1.0 : 0.0; // Intermittent chattering
+        qEffective *= (0.65 + 0.35 * Math.sin(state.totalElapsed * 16.0));
+        pulseMultiplier = (Math.random() > 0.3) ? 1.0 : 0.0;
       }
 
-      // Add small realistic turbulence noise
-      if (qEffective > 0.1) {
-        qEffective += (Math.random() - 0.5) * 0.04;
-      }
+      if (qEffective > 0.1) qEffective += (Math.random() - 0.5) * 0.04;
       state.flowLpm = Math.max(0.0, qEffective);
       state.flowMls = state.flowLpm * (1000.0 / 60.0);
 
@@ -1133,29 +1220,24 @@
         state.freqHz = 0.0;
       }
 
-      // Mass Balance (dV/dt = Qin - Qout)
+      // Vessel Mass Balance
       const dtMin = dt / 60.0;
       const pumpedL = state.flowLpm * dtMin;
 
       if (state.fsmState === 'FLUSH') {
         state.tk02Vol = Math.max(0.0, state.tk02Vol - pumpedL);
         state.totalFlushLiters += pumpedL;
-        // Flush fluid returns or drains to 10L tank
         state.tk01Vol = Math.min(CONFIG.tk01Capacity, state.tk01Vol + pumpedL);
       } else if (state.fsmState === 'CASE1' || state.fsmState === 'CASE1_ALARM') {
-        // Feed from TK-01 to Sump via P-01
         const feedL = (CONFIG.qMaxPump_lpm * state.p1ActualDuty * 0.65) * dtMin;
         state.tk01Vol = Math.max(0.0, state.tk01Vol - feedL);
         state.smp01Vol = Math.min(CONFIG.smp01Capacity, state.smp01Vol + feedL);
-
-        // Discharge from Sump to TK-01 via P-02
         state.smp01Vol = Math.max(0.0, state.smp01Vol - pumpedL);
         state.tk01Vol = Math.min(CONFIG.tk01Capacity, state.tk01Vol + pumpedL);
       }
-
       state.totalLiters += pumpedL;
 
-      // Fluid Mechanics (Velocity & Reynolds Number)
+      // Hydrodynamics: v = Q/A and Re = rho*v*D/mu
       const q_m3_s = (state.flowLpm * 1e-3) / 60.0;
       state.velocity = q_m3_s / CONFIG.pipeArea_m2;
       state.reynolds = (CONFIG.fluidDensity_kg_m3 * state.velocity * CONFIG.pipeDiameter_m) / CONFIG.dynamicViscosity_Pa_s;
@@ -1164,7 +1246,7 @@
       else if (state.reynolds <= 4000) state.flowRegime = 'TRANSITIONAL';
       else state.flowRegime = 'TURBULENT';
 
-      // History logging for charts (every 200ms)
+      // History logging for 2D charts
       state.totalElapsed += dt;
       if (state.timeLog.length === 0 || state.totalElapsed - state.timeLog[state.timeLog.length - 1] >= 0.25) {
         state.timeLog.push(state.totalElapsed);
@@ -1175,58 +1257,114 @@
         state.tk02Log.push(state.tk02Vol);
 
         if (state.timeLog.length > 200) {
-          state.timeLog.shift();
-          state.flowMlsLog.shift();
-          state.flowLpmLog.shift();
-          state.tk01Log.shift();
-          state.smp01Log.shift();
-          state.tk02Log.shift();
+          state.timeLog.shift(); state.flowMlsLog.shift(); state.flowLpmLog.shift();
+          state.tk01Log.shift(); state.smp01Log.shift(); state.tk02Log.shift();
         }
       }
     }
 
     /* =========================================================================
-       6. 3D VISUAL SYNCHRONIZATION
+       6. REAL-TIME 3D VISUAL SYNCHRONIZATION & WATER FLOW ANIMATIONS
        ========================================================================= */
     function updateVisuals(dt) {
-      // 1. Tank water level scaling
+      // 1. Tank water level scaling & surface ripples
       function updateTankMesh(obj, currentVol) {
         const fillFraction = Math.max(0.01, Math.min(1.0, currentVol / obj.maxVol));
         obj.fluidMesh.scale.y = fillFraction;
         obj.fluidMesh.position.y = (obj.h * 0.95 * fillFraction) / 2;
       }
-
       updateTankMesh(tk01Obj, state.tk01Vol);
       updateTankMesh(smp01Obj, state.smp01Vol);
       updateTankMesh(tk02Obj, state.tk02Vol);
 
-      // Float switch bob vertical tracking
+      // 2. Float switch ring physically tracks water surface
       const sumpFraction = state.smp01Vol / CONFIG.smp01Capacity;
-      floatBob.position.y = -0.4 + (sumpFraction * 0.8);
-      floatBob.material.color.setHex(state.ls01High ? 0xef4444 : 0x10b981);
+      floatRing.position.y = -0.42 + (sumpFraction * 0.85);
+      floatRing.material.color.setHex(state.ls01High ? 0xef4444 : 0x10b981);
 
-      // Solenoid LED
+      // 3. Actuator states: Solenoid & Ball valves
       xvLed.material.color.setHex(state.xv01Open ? 0x10b981 : 0xef4444);
+      bv01Obj.lever.rotation.y = -(state.bv01Pos / 100.0) * (Math.PI / 2);
+      bv02Obj.lever.rotation.y = -(state.bv02Pos / 100.0) * (Math.PI / 2);
 
-      // Ball valve handle rotations
-      bv01Group.children[2].rotation.y = -(state.bv01Pos / 100.0) * (Math.PI / 2);
-      bv02Group.children[1].rotation.y = -(state.bv02Pos / 100.0) * (Math.PI / 2);
+      // 4. Pump impeller spinning & internal volute fluid swirl
+      pumps['P-01'].impellerGroup.rotation.x += state.p1ActualDuty * dt * 28.0;
+      pumps['P-01'].swirlWater.rotation.z += state.p1ActualDuty * dt * 20.0;
+      pumps['P-01'].swirlWater.material.opacity = state.p1ActualDuty > 0.05 ? 0.65 : 0.2;
 
-      // Pump impeller rotation speeds
-      pumps['P-01'].impellerGroup.rotation.x += state.p1ActualDuty * dt * 25.0;
-      pumps['P-02'].impellerGroup.rotation.x += state.p2ActualDuty * dt * 35.0;
-      pumps['P-03'].impellerGroup.rotation.x += state.p3ActualDuty * dt * 35.0;
+      pumps['P-02'].impellerGroup.rotation.x += state.p2ActualDuty * dt * 38.0;
+      pumps['P-02'].swirlWater.rotation.z += state.p2ActualDuty * dt * 30.0;
+      pumps['P-02'].swirlWater.material.opacity = state.p2ActualDuty > 0.05 ? 0.65 : 0.2;
 
-      // Flow Transmitter turbine rotation & pulse blink
+      pumps['P-03'].impellerGroup.rotation.x += state.p3ActualDuty * dt * 38.0;
+      pumps['P-03'].swirlWater.rotation.z += state.p3ActualDuty * dt * 30.0;
+      pumps['P-03'].swirlWater.material.opacity = state.p3ActualDuty > 0.05 ? 0.65 : 0.2;
+
+      // 5. Flow transmitter turbine rotation & pulse blinking
       if (state.flowLpm > 0.05) {
-        ftTurbine.rotation.x += state.flowLpm * dt * 15.0;
-        const blink = Math.sin(state.totalElapsed * state.freqHz * 0.5) > 0;
+        ftTurbine.rotation.x += state.flowLpm * dt * 18.0;
+        const blink = Math.sin(state.totalElapsed * state.freqHz * 0.6) > 0;
         ftPulseLed.material.color.setHex(blink ? 0xf59e0b : 0x1e293b);
       } else {
         ftPulseLed.material.color.setHex(0x1e293b);
       }
 
-      // Animate fluid particles inside pipes
+      // 6. REAL-TIME WATER STREAMS & SPLASHES
+      // Stream 1: P-01 pouring into Sump
+      const p1Pouring = (state.p1ActualDuty > 0.08 && state.tk01Vol > 0.05);
+      p1StreamMesh.visible = p1Pouring;
+      if (p1Pouring) {
+        const streamHeight = Math.max(0.1, (1.15 - (0.54 + 0.95 * sumpFraction)));
+        p1StreamMesh.scale.set(1.0, streamHeight / 0.45, 1.0);
+        p1StreamMesh.position.y = 1.15 - (streamHeight / 2);
+      }
+
+      // Stream 2: External fluid injection cascading into Sump
+      extStreamMesh.visible = state.injectionActive;
+      if (state.injectionActive) {
+        extStreamMesh.scale.x = 1.0 + 0.15 * Math.sin(state.totalElapsed * 30.0);
+        extStreamMesh.scale.z = 1.0 + 0.15 * Math.cos(state.totalElapsed * 28.0);
+      }
+
+      // Stream 3: Return line discharging into TK-01
+      const returning = (state.flowLpm > 0.15);
+      returnStreamMesh.visible = returning;
+      if (returning) {
+        const tk1Fraction = state.tk01Vol / CONFIG.tk01Capacity;
+        const returnHeight = Math.max(0.1, (1.5 - (0.54 + 1.5 * tk1Fraction)));
+        returnStreamMesh.scale.set(1.0, returnHeight / 0.5, 1.0);
+        returnStreamMesh.position.y = 1.5 - (returnHeight / 2);
+      }
+
+      // Splash particles animation on Sump water surface
+      const splashing = (p1Pouring || state.injectionActive);
+      splashParticles.visible = splashing;
+      if (splashing) {
+        const waterSurfaceY = 0.54 + 0.95 * sumpFraction;
+        const posAttr = splashParticles.geometry.attributes.position;
+        for (let i = 0; i < splashCount; i++) {
+          const v = splashVel[i];
+          let px = posAttr.getX(i) + v.vx * dt;
+          let py = posAttr.getY(i) + v.vy * dt - 1.8 * dt * dt; // gravity
+          let pz = posAttr.getZ(i) + v.vz * dt;
+
+          v.vy -= 2.5 * dt;
+
+          if (py < waterSurfaceY) {
+            // Reset droplet
+            px = (Math.random() - 0.5) * 0.08;
+            py = waterSurfaceY;
+            pz = 0.4 + (Math.random() - 0.5) * 0.08;
+            v.vx = (Math.random() - 0.5) * (state.injectionActive ? 0.8 : 0.35);
+            v.vy = (state.injectionActive ? 0.6 : 0.3) + Math.random() * 0.4;
+            v.vz = (Math.random() - 0.5) * (state.injectionActive ? 0.8 : 0.35);
+          }
+          posAttr.setXYZ(i, px, py, pz);
+        }
+        posAttr.needsUpdate = true;
+      }
+
+      // 7. Internal pipeline fluid flow & moving bubbles
       pipes.forEach((pipe) => {
         let isBranchActive = false;
         if (pipe === pLineRecircIn && state.xv01Open && state.p1ActualDuty > 0.05) isBranchActive = true;
@@ -1237,12 +1375,11 @@
         if (pipe === pLineFtToTk01 && state.flowLpm > 0.05) isBranchActive = true;
 
         pipe.pSystem.visible = isBranchActive;
-
         if (isBranchActive) {
-          const vFlow = Math.max(0.2, state.velocity * 0.8);
+          const vFlow = Math.max(0.25, state.velocity * 0.85);
           const posAttr = pipe.pSystem.geometry.attributes.position;
           for (let i = 0; i < pipe.particleCount; i++) {
-            pipe.uProgress[i] = (pipe.uProgress[i] + dt * vFlow * 0.3) % 1.0;
+            pipe.uProgress[i] = (pipe.uProgress[i] + dt * vFlow * 0.32) % 1.0;
             const pt = pipe.curve.getPoint(pipe.uProgress[i]);
             posAttr.setXYZ(i, pt.x, pt.y, pt.z);
           }
@@ -1252,10 +1389,9 @@
     }
 
     /* =========================================================================
-       7. UI SYNCHRONIZATION & HUD REFRESH
+       7. UI SYNCHRONIZATION & TELEMETRY REFRESH
        ========================================================================= */
     function updateHUD() {
-      // Status Badge
       const statusBadge = document.getElementById('statusBadge');
       const statusText = document.getElementById('statusText');
       statusBadge.className = 'status-badge';
@@ -1265,57 +1401,33 @@
         statusText.textContent = 'POWER OFF';
       } else {
         switch (state.fsmState) {
-          case 'IDLE':
-            statusBadge.classList.add('badge-idle');
-            statusText.textContent = 'IDLE';
-            break;
-          case 'CASE1':
-            statusBadge.classList.add('badge-case1');
-            statusText.textContent = 'CASE 1: RECIRCULATION';
-            break;
-          case 'CASE1_ALARM':
-            statusBadge.classList.add('badge-alarm');
-            statusText.textContent = 'SUMP HIGH LEVEL INTERLOCK';
-            break;
-          case 'FLUSH':
-            statusBadge.classList.add('badge-flush');
-            statusText.textContent = 'CASE 2: FLUSHING SEQUENCE';
-            break;
-          case 'DONE':
-            statusBadge.classList.add('badge-done');
-            statusText.textContent = 'SAFE SHUTDOWN COMPLETE';
-            break;
+          case 'IDLE': statusBadge.classList.add('badge-idle'); statusText.textContent = 'IDLE'; break;
+          case 'CASE1': statusBadge.classList.add('badge-case1'); statusText.textContent = 'CASE 1: RECIRCULATION'; break;
+          case 'CASE1_ALARM': statusBadge.classList.add('badge-alarm'); statusText.textContent = 'SUMP HIGH LEVEL INTERLOCK'; break;
+          case 'FLUSH': statusBadge.classList.add('badge-flush'); statusText.textContent = 'CASE 2: FLUSHING SEQUENCE'; break;
+          case 'DONE': statusBadge.classList.add('badge-done'); statusText.textContent = 'SAFE SHUTDOWN COMPLETE'; break;
         }
       }
 
       document.getElementById('caseTimer').textContent = `${state.fsmTimer.toFixed(1)}s`;
-
-      // Flow metrics
       document.getElementById('hudFlowLpm').innerHTML = `${state.flowLpm.toFixed(3)}<span class="metric-unit">L/min</span>`;
       document.getElementById('hudFlowMls').innerHTML = `${state.flowMls.toFixed(1)}<span class="metric-unit">mL/s</span>`;
       document.getElementById('hudFreq').innerHTML = `${state.freqHz.toFixed(1)}<span class="metric-unit">Hz</span>`;
       document.getElementById('hudTotalL').innerHTML = `${state.totalLiters.toFixed(3)}<span class="metric-unit">L</span>`;
 
-      // Fluid dynamics
       document.getElementById('hudVelocity').innerHTML = `${state.velocity.toFixed(3)}<span class="metric-unit">m/s</span>`;
       document.getElementById('hudRe').textContent = Math.round(state.reynolds);
       const hudRegime = document.getElementById('hudRegime');
       hudRegime.textContent = state.flowRegime;
-      if (state.flowRegime === 'LAMINAR') hudRegime.style.color = 'var(--accent)';
-      else if (state.flowRegime === 'TRANSITIONAL') hudRegime.style.color = 'var(--warning)';
-      else hudRegime.style.color = 'var(--danger)';
+      hudRegime.style.color = state.flowRegime === 'LAMINAR' ? 'var(--accent)' : (state.flowRegime === 'TRANSITIONAL' ? 'var(--warning)' : 'var(--danger)');
 
-      // Tank Bars
       document.getElementById('tk01Label').textContent = `${state.tk01Vol.toFixed(2)} L`;
       document.getElementById('tk01Bar').style.width = `${(state.tk01Vol / CONFIG.tk01Capacity) * 100}%`;
-
       document.getElementById('smp01Label').textContent = `${state.smp01Vol.toFixed(2)} L`;
       document.getElementById('smp01Bar').style.width = `${(state.smp01Vol / CONFIG.smp01Capacity) * 100}%`;
-
       document.getElementById('tk02Label').textContent = `${state.tk02Vol.toFixed(2)} L`;
       document.getElementById('tk02Bar').style.width = `${(state.tk02Vol / CONFIG.tk02Capacity) * 100}%`;
 
-      // Hardware States
       const floatEl = document.getElementById('hudFloatState');
       floatEl.textContent = state.ls01High ? 'TRIPPED (HIGH)' : 'NORMAL';
       floatEl.style.color = state.ls01High ? 'var(--danger)' : 'var(--success)';
@@ -1331,7 +1443,7 @@
     }
 
     /* =========================================================================
-       8. 2D LIVE CANVAS CHARTS (Flow, Tanks, Valve, Calibration)
+       8. 2D LIVE CHARTS ENGINE (Native Canvas, Zero Libs)
        ========================================================================= */
     const chartCanvas = document.getElementById('liveChartCanvas');
     const chartCtx = chartCanvas.getContext('2d');
@@ -1344,198 +1456,130 @@
     }
 
     function renderCharts() {
-      // Auto resize canvas resolution
       const w = chartCanvas.parentElement.clientWidth;
       const h = chartCanvas.parentElement.clientHeight;
       if (chartCanvas.width !== w || chartCanvas.height !== h) {
-        chartCanvas.width = w;
-        chartCanvas.height = h;
+        chartCanvas.width = w; chartCanvas.height = h;
       }
-
       chartCtx.clearRect(0, 0, w, h);
 
       if (currentChartTab === 'flow') {
-        renderFlowChart(w, h);
-      } else if (currentChartTab === 'tanks') {
-        renderTanksChart(w, h);
-      } else if (currentChartTab === 'valve') {
-        renderValveChart(w, h);
-      } else if (currentChartTab === 'calib') {
-        renderCalibChart(w, h);
-      }
-    }
+        const padding = { top: 20, right: 30, bottom: 25, left: 50 };
+        const cw = w - padding.left - padding.right;
+        const ch = h - padding.top - padding.bottom;
 
-    function renderFlowChart(w, h) {
-      const padding = { top: 20, right: 30, bottom: 25, left: 50 };
-      const cw = w - padding.left - padding.right;
-      const ch = h - padding.top - padding.bottom;
-
-      // Draw Grid & Axes
-      chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      chartCtx.lineWidth = 1;
-      chartCtx.beginPath();
-      for (let y = 0; y <= 4; y++) {
-        const py = padding.top + (ch / 4) * y;
-        chartCtx.moveTo(padding.left, py);
-        chartCtx.lineTo(padding.left + cw, py);
-      }
-      chartCtx.stroke();
-
-      // Labels
-      chartCtx.fillStyle = '#9ca3af';
-      chartCtx.font = '10px sans-serif';
-      chartCtx.fillText('100 mL/s (6 L/min)', 5, padding.top + 8);
-      chartCtx.fillText('50 mL/s (3 L/min)', 5, padding.top + ch / 2 + 3);
-      chartCtx.fillText('0 mL/s', 15, padding.top + ch);
-
-      // Target 3 L/min reference dashed line
-      chartCtx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
-      chartCtx.setLineDash([4, 4]);
-      chartCtx.beginPath();
-      const targetY = padding.top + ch * (1 - 50.0 / 100.0);
-      chartCtx.moveTo(padding.left, targetY);
-      chartCtx.lineTo(padding.left + cw, targetY);
-      chartCtx.stroke();
-      chartCtx.setLineDash([]);
-
-      if (state.flowMlsLog.length < 2) return;
-
-      // Draw Flow mL/s Line
-      chartCtx.strokeStyle = '#06b6d4';
-      chartCtx.lineWidth = 2;
-      chartCtx.beginPath();
-      for (let i = 0; i < state.flowMlsLog.length; i++) {
-        const px = padding.left + (i / (state.flowMlsLog.length - 1)) * cw;
-        const py = padding.top + ch * (1 - Math.min(100.0, state.flowMlsLog[i]) / 100.0);
-        if (i === 0) chartCtx.moveTo(px, py);
-        else chartCtx.lineTo(px, py);
-      }
-      chartCtx.stroke();
-    }
-
-    function renderTanksChart(w, h) {
-      const padding = { top: 20, right: 30, bottom: 25, left: 50 };
-      const cw = w - padding.left - padding.right;
-      const ch = h - padding.top - padding.bottom;
-
-      chartCtx.fillStyle = '#9ca3af';
-      chartCtx.font = '10px sans-serif';
-      chartCtx.fillText('10.0 L', 15, padding.top + 5);
-      chartCtx.fillText('5.0 L', 20, padding.top + ch / 2);
-      chartCtx.fillText('0.0 L', 20, padding.top + ch);
-
-      function drawSeries(log, color) {
-        if (log.length < 2) return;
-        chartCtx.strokeStyle = color;
-        chartCtx.lineWidth = 2;
-        chartCtx.beginPath();
-        for (let i = 0; i < log.length; i++) {
-          const px = padding.left + (i / (log.length - 1)) * cw;
-          const py = padding.top + ch * (1 - Math.min(10.0, log[i]) / 10.0);
-          if (i === 0) chartCtx.moveTo(px, py);
-          else chartCtx.lineTo(px, py);
+        chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)'; chartCtx.lineWidth = 1; chartCtx.beginPath();
+        for (let y = 0; y <= 4; y++) {
+          const py = padding.top + (ch / 4) * y;
+          chartCtx.moveTo(padding.left, py); chartCtx.lineTo(padding.left + cw, py);
         }
         chartCtx.stroke();
-      }
 
-      drawSeries(state.tk01Log, '#0284c7'); // TK-01
-      drawSeries(state.smp01Log, '#38bdf8'); // SMP-01
-      drawSeries(state.tk02Log, '#10b981'); // TK-02
-    }
+        chartCtx.fillStyle = '#9ca3af'; chartCtx.font = '10px sans-serif';
+        chartCtx.fillText('100 mL/s (6 L/min)', 5, padding.top + 8);
+        chartCtx.fillText('50 mL/s (3 L/min)', 5, padding.top + ch / 2 + 3);
+        chartCtx.fillText('0 mL/s', 15, padding.top + ch);
 
-    function renderValveChart(w, h) {
-      const padding = { top: 25, right: 30, bottom: 30, left: 50 };
-      const cw = w - padding.left - padding.right;
-      const ch = h - padding.top - padding.bottom;
+        chartCtx.strokeStyle = 'rgba(245, 158, 11, 0.4)'; chartCtx.setLineDash([4, 4]); chartCtx.beginPath();
+        const targetY = padding.top + ch * (1 - 50.0 / 100.0);
+        chartCtx.moveTo(padding.left, targetY); chartCtx.lineTo(padding.left + cw, targetY);
+        chartCtx.stroke(); chartCtx.setLineDash([]);
 
-      // Axis labels
-      chartCtx.fillStyle = '#9ca3af';
-      chartCtx.font = '10px sans-serif';
-      chartCtx.fillText('Flow (L/min)', 10, 15);
-      chartCtx.fillText('Valve Position (%)', padding.left + cw / 2 - 40, h - 8);
+        if (state.flowMlsLog.length >= 2) {
+          chartCtx.strokeStyle = '#06b6d4'; chartCtx.lineWidth = 2; chartCtx.beginPath();
+          for (let i = 0; i < state.flowMlsLog.length; i++) {
+            const px = padding.left + (i / (state.flowMlsLog.length - 1)) * cw;
+            const py = padding.top + ch * (1 - Math.min(100.0, state.flowMlsLog[i]) / 100.0);
+            if (i === 0) chartCtx.moveTo(px, py); else chartCtx.lineTo(px, py);
+          }
+          chartCtx.stroke();
+        }
+      } else if (currentChartTab === 'tanks') {
+        const padding = { top: 20, right: 30, bottom: 25, left: 50 };
+        const cw = w - padding.left - padding.right;
+        const ch = h - padding.top - padding.bottom;
 
-      // Curve
-      chartCtx.strokeStyle = '#3b82f6';
-      chartCtx.lineWidth = 2.5;
-      chartCtx.beginPath();
-      for (let p = 0; p <= 100; p += 2) {
-        const factor = Math.pow(p / 100.0, 1.8);
-        const q = CONFIG.qMaxPump_lpm * factor * 0.65;
-        const px = padding.left + (p / 100.0) * cw;
-        const py = padding.top + ch * (1 - q / 4.0);
-        if (p === 0) chartCtx.moveTo(px, py);
-        else chartCtx.lineTo(px, py);
-      }
-      chartCtx.stroke();
+        chartCtx.fillStyle = '#9ca3af'; chartCtx.font = '10px sans-serif';
+        chartCtx.fillText('10.0 L', 15, padding.top + 5);
+        chartCtx.fillText('5.0 L', 20, padding.top + ch / 2);
+        chartCtx.fillText('0.0 L', 20, padding.top + ch);
 
-      // Current operating point
-      const curFactor = Math.pow(state.bv02Pos / 100.0, 1.8);
-      const curQ = CONFIG.qMaxPump_lpm * curFactor * 0.65;
-      const curX = padding.left + (state.bv02Pos / 100.0) * cw;
-      const curY = padding.top + ch * (1 - curQ / 4.0);
+        function drawSeries(log, color) {
+          if (log.length < 2) return;
+          chartCtx.strokeStyle = color; chartCtx.lineWidth = 2; chartCtx.beginPath();
+          for (let i = 0; i < log.length; i++) {
+            const px = padding.left + (i / (log.length - 1)) * cw;
+            const py = padding.top + ch * (1 - Math.min(10.0, log[i]) / 10.0);
+            if (i === 0) chartCtx.moveTo(px, py); else chartCtx.lineTo(px, py);
+          }
+          chartCtx.stroke();
+        }
+        drawSeries(state.tk01Log, '#0284c7');
+        drawSeries(state.smp01Log, '#38bdf8');
+        drawSeries(state.tk02Log, '#10b981');
+      } else if (currentChartTab === 'valve') {
+        const padding = { top: 25, right: 30, bottom: 30, left: 50 };
+        const cw = w - padding.left - padding.right;
+        const ch = h - padding.top - padding.bottom;
 
-      chartCtx.fillStyle = '#ef4444';
-      chartCtx.beginPath();
-      chartCtx.arc(curX, curY, 6, 0, Math.PI * 2);
-      chartCtx.fill();
-    }
+        chartCtx.fillStyle = '#9ca3af'; chartCtx.font = '10px sans-serif';
+        chartCtx.fillText('Flow (L/min)', 10, 15);
+        chartCtx.fillText('Valve Position (%)', padding.left + cw / 2 - 40, h - 8);
 
-    function renderCalibChart(w, h) {
-      const padding = { top: 25, right: 30, bottom: 30, left: 50 };
-      const cw = w - padding.left - padding.right;
-      const ch = h - padding.top - padding.bottom;
+        chartCtx.strokeStyle = '#3b82f6'; chartCtx.lineWidth = 2.5; chartCtx.beginPath();
+        for (let p = 0; p <= 100; p += 2) {
+          const factor = Math.pow(p / 100.0, 1.8);
+          const q = CONFIG.qMaxPump_lpm * factor * 0.65;
+          const px = padding.left + (p / 100.0) * cw;
+          const py = padding.top + ch * (1 - q / 4.0);
+          if (p === 0) chartCtx.moveTo(px, py); else chartCtx.lineTo(px, py);
+        }
+        chartCtx.stroke();
 
-      chartCtx.fillStyle = '#9ca3af';
-      chartCtx.font = '10px sans-serif';
-      chartCtx.fillText('Q (L/min)', 10, 15);
-      chartCtx.fillText('Pulse Frequency f (Hz)', padding.left + cw / 2 - 50, h - 8);
+        const curFactor = Math.pow(state.bv02Pos / 100.0, 1.8);
+        const curQ = CONFIG.qMaxPump_lpm * curFactor * 0.65;
+        const curX = padding.left + (state.bv02Pos / 100.0) * cw;
+        const curY = padding.top + ch * (1 - curQ / 4.0);
+        chartCtx.fillStyle = '#ef4444'; chartCtx.beginPath(); chartCtx.arc(curX, curY, 6, 0, Math.PI * 2); chartCtx.fill();
+      } else if (currentChartTab === 'calib') {
+        const padding = { top: 25, right: 30, bottom: 30, left: 50 };
+        const cw = w - padding.left - padding.right;
+        const ch = h - padding.top - padding.bottom;
 
-      // Regression line: Q = a * f + b
-      chartCtx.strokeStyle = '#10b981';
-      chartCtx.lineWidth = 2;
-      chartCtx.beginPath();
-      const fMax = 50.0;
-      const qMax = 6.5;
+        chartCtx.fillStyle = '#9ca3af'; chartCtx.font = '10px sans-serif';
+        chartCtx.fillText('Q (L/min)', 10, 15);
+        chartCtx.fillText('Pulse Frequency f (Hz)', padding.left + cw / 2 - 50, h - 8);
 
-      const p1x = padding.left;
-      const p1y = padding.top + ch * (1 - (CONFIG.calib_b) / qMax);
-      const p2x = padding.left + cw;
-      const p2y = padding.top + ch * (1 - (CONFIG.calib_a * fMax + CONFIG.calib_b) / qMax);
+        chartCtx.strokeStyle = '#10b981'; chartCtx.lineWidth = 2; chartCtx.beginPath();
+        const fMax = 50.0; const qMax = 6.5;
+        const p1x = padding.left; const p1y = padding.top + ch * (1 - CONFIG.calib_b / qMax);
+        const p2x = padding.left + cw; const p2y = padding.top + ch * (1 - (CONFIG.calib_a * fMax + CONFIG.calib_b) / qMax);
+        chartCtx.moveTo(p1x, p1y); chartCtx.lineTo(p2x, p2y); chartCtx.stroke();
 
-      chartCtx.moveTo(p1x, p1y);
-      chartCtx.lineTo(p2x, p2y);
-      chartCtx.stroke();
-
-      // Scatter Points
-      const sampleF = [7.5, 15.2, 23.0, 34.5, 46.2];
-      const sampleQ = [1.0, 2.0, 3.0, 4.5, 6.0];
-      chartCtx.fillStyle = '#f59e0b';
-      for (let i = 0; i < sampleF.length; i++) {
-        const sx = padding.left + (sampleF[i] / fMax) * cw;
-        const sy = padding.top + ch * (1 - sampleQ[i] / qMax);
-        chartCtx.beginPath();
-        chartCtx.arc(sx, sy, 4.5, 0, Math.PI * 2);
-        chartCtx.fill();
+        const sampleF = [7.5, 15.2, 23.0, 34.5, 46.2];
+        const sampleQ = [1.0, 2.0, 3.0, 4.5, 6.0];
+        chartCtx.fillStyle = '#f59e0b';
+        for (let i = 0; i < sampleF.length; i++) {
+          const sx = padding.left + (sampleF[i] / fMax) * cw;
+          const sy = padding.top + ch * (1 - sampleQ[i] / qMax);
+          chartCtx.beginPath(); chartCtx.arc(sx, sy, 4.5, 0, Math.PI * 2); chartCtx.fill();
+        }
       }
     }
 
     /* =========================================================================
-       9. USER INTERACTION HANDLERS & EXPORTS
+       9. USER INTERACTIONS & EXPORTS
        ========================================================================= */
-    // Master SW-01 Switch
     const sw01Toggle = document.getElementById('sw01Toggle');
     sw01Toggle.addEventListener('change', (e) => {
       state.powerOn = e.target.checked;
       if (state.powerOn) {
-        state.fsmState = 'CASE1';
-        state.fsmTimer = 0.0;
-        state.totalLiters = 0.0;
+        state.fsmState = 'CASE1'; state.fsmTimer = 0.0; state.totalLiters = 0.0;
       } else {
         state.fsmState = 'IDLE';
       }
     });
 
-    // P&ID Overlay Toggle
     const pidToggleBtn = document.getElementById('pidToggleBtn');
     pidToggleBtn.addEventListener('click', () => {
       const show = !pidLabels[0].visible;
@@ -1543,32 +1587,25 @@
       pidToggleBtn.classList.toggle('active', show);
     });
 
-    // Case 1 & Case 2 Buttons
     document.getElementById('case1Btn').addEventListener('click', () => {
-      if (!state.powerOn) {
-        sw01Toggle.checked = true;
-        state.powerOn = true;
-      }
-      state.fsmState = 'CASE1';
-      state.fsmTimer = 0.0;
+      if (!state.powerOn) { sw01Toggle.checked = true; state.powerOn = true; }
+      state.fsmState = 'CASE1'; state.fsmTimer = 0.0;
     });
 
     function triggerCase2Flush() {
       if (state.bv01Pos < 10) {
         alert('CAUTION: Manual Ball Valve BV-01 is closed! Pump-03 will run dry. Please open BV-01 to allow flush water flow.');
       }
-      state.fsmState = 'FLUSH';
-      state.fsmTimer = 0.0;
-      state.totalFlushLiters = 0.0;
+      state.fsmState = 'FLUSH'; state.fsmTimer = 0.0; state.totalFlushLiters = 0.0;
     }
     document.getElementById('case2Btn').addEventListener('click', triggerCase2Flush);
 
-    // External Fluid Injection to Sump
+    // External Fluid Injection Button (Triggers cascade stream)
     document.getElementById('injectSumpBtn').addEventListener('click', () => {
-      state.smp01Vol = Math.min(CONFIG.smp01Capacity, state.smp01Vol + 2.5);
+      state.injectionActive = true;
+      state.injectionTimer = 0.0;
     });
 
-    // Sliders
     const bv01Slider = document.getElementById('bv01Slider');
     const bv01Val = document.getElementById('bv01Val');
     bv01Slider.addEventListener('input', (e) => {
@@ -1584,12 +1621,9 @@
     });
 
     function setValvePreset(pct) {
-      bv02Slider.value = pct;
-      state.bv02Pos = pct;
-      bv02Val.textContent = `${pct}%`;
+      bv02Slider.value = pct; state.bv02Pos = pct; bv02Val.textContent = `${pct}%`;
     }
 
-    // Fault Selector
     const faultDescriptions = {
       NONE: "Condition A: Healthy baseline operation at nominal 3 L/min design flow.",
       RESTRICTED: "Condition B: Valve throttled or partial strainer blockage. Flow is reduced proportionally.",
@@ -1603,60 +1637,43 @@
       document.getElementById('faultDescription').textContent = faultDescriptions[state.faultMode];
     });
 
-    // Manual Overrides
     const manualModeToggle = document.getElementById('manualModeToggle');
     const manualControls = document.getElementById('manualControls');
     manualModeToggle.addEventListener('change', (e) => {
       state.manualMode = e.target.checked;
-      manualControls.style.opacity = state.manualMode ? '1' : '0.4';
+      manualControls.style.opacity = state.manualMode ? '1' : '0.35';
       manualControls.style.pointerEvents = state.manualMode ? 'all' : 'none';
     });
 
     document.getElementById('p1DutySlider').addEventListener('input', (e) => {
-      state.p1TargetDuty = e.target.value / 100.0;
-      document.getElementById('p1DutyLabel').textContent = `${e.target.value}%`;
+      state.p1TargetDuty = e.target.value / 100.0; document.getElementById('p1DutyLabel').textContent = `${e.target.value}%`;
     });
     document.getElementById('p2DutySlider').addEventListener('input', (e) => {
-      state.p2TargetDuty = e.target.value / 100.0;
-      document.getElementById('p2DutyLabel').textContent = `${e.target.value}%`;
+      state.p2TargetDuty = e.target.value / 100.0; document.getElementById('p2DutyLabel').textContent = `${e.target.value}%`;
     });
     document.getElementById('p3DutySlider').addEventListener('input', (e) => {
-      state.p3TargetDuty = e.target.value / 100.0;
-      document.getElementById('p3DutyLabel').textContent = `${e.target.value}%`;
+      state.p3TargetDuty = e.target.value / 100.0; document.getElementById('p3DutyLabel').textContent = `${e.target.value}%`;
     });
     document.getElementById('xv01Btn').addEventListener('click', (e) => {
-      state.xv01Open = !state.xv01Open;
-      e.target.textContent = state.xv01Open ? 'OPEN' : 'CLOSED';
+      state.xv01Open = !state.xv01Open; e.target.textContent = state.xv01Open ? 'OPEN' : 'CLOSED';
     });
 
-    // Sim Speed
     document.getElementById('simSpeedSelect').addEventListener('change', (e) => {
       state.simSpeed = parseFloat(e.target.value);
     });
 
-    // Reset Rig
     document.getElementById('resetBtn').addEventListener('click', () => {
-      state.tk01Vol = 8.0;
-      state.smp01Vol = 1.5;
-      state.tk02Vol = 4.2;
-      state.totalLiters = 0.0;
-      state.totalFlushLiters = 0.0;
-      state.fsmState = 'IDLE';
-      state.powerOn = false;
-      sw01Toggle.checked = false;
-      state.timeLog = [];
-      state.flowMlsLog = [];
-      state.flowLpmLog = [];
+      state.tk01Vol = 8.0; state.smp01Vol = 1.5; state.tk02Vol = 4.2;
+      state.totalLiters = 0.0; state.totalFlushLiters = 0.0;
+      state.fsmState = 'IDLE'; state.powerOn = false; sw01Toggle.checked = false;
+      state.injectionActive = false;
+      state.timeLog = []; state.flowMlsLog = []; state.flowLpmLog = [];
     });
 
-    // Modals
-    function toggleModal(id, show) {
-      document.getElementById(id).style.display = show ? 'flex' : 'none';
-    }
+    function toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; }
     document.getElementById('calibModalBtn').addEventListener('click', () => toggleModal('calibModal', true));
     document.getElementById('residenceModalBtn').addEventListener('click', () => toggleModal('residenceModal', true));
 
-    // Populate Calibration Table
     const calibTableBody = document.getElementById('calibTableBody');
     const calibTrials = [
       { t: 1, n: 450, time: 60, vol: 1.00 },
@@ -1671,14 +1688,7 @@
         const f = (row.n / row.time).toFixed(2);
         const q = ((row.vol / row.time) * 60).toFixed(2);
         calibTableBody.innerHTML += `
-          <tr>
-            <td>Trial ${row.t}</td>
-            <td>${row.n}</td>
-            <td>${row.time}s</td>
-            <td>${f} Hz</td>
-            <td>${row.vol.toFixed(2)} L</td>
-            <td><b>${q} L/min</b></td>
-          </tr>
+          <tr><td>Trial ${row.t}</td><td>${row.n}</td><td>${row.time}s</td><td>${f} Hz</td><td>${row.vol.toFixed(2)} L</td><td><b>${q} L/min</b></td></tr>
         `;
       });
     }
@@ -1689,13 +1699,11 @@
       alert('5-point gravimetric bucket test simulated across 1 to 6 L/min range.');
     }
     function applyCalibCoeffs() {
-      CONFIG.calib_a = 0.12926;
-      CONFIG.calib_b = 0.03222;
+      CONFIG.calib_a = 0.12926; CONFIG.calib_b = 0.03222;
       alert(`Applied new sensor equation: Q = ${CONFIG.calib_a} * f + ${CONFIG.calib_b}`);
       toggleModal('calibModal', false);
     }
 
-    // Export Telemetry CSV
     document.getElementById('exportCsvBtn').addEventListener('click', () => {
       let csv = 'Timestamp_s,Flow_Lpm,Flow_Mls,TK01_L,SMP01_L,TK02_L\n';
       for (let i = 0; i < state.timeLog.length; i++) {
@@ -1703,17 +1711,14 @@
       }
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `TEAM_DISTRO_telemetry_${Date.now()}.csv`;
-      a.click();
+      const a = document.createElement('a'); a.href = url;
+      a.download = `TEAM_DISTRO_telemetry_${Date.now()}.csv`; a.click();
     });
 
-    // Export P&ID SVG
     document.getElementById('exportSvgBtn').addEventListener('click', () => {
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
-  <rect width="1000" height="600" fill="#0f172a" />
+  <rect width="1000" height="600" fill="#070b16" />
   <text x="50" y="40" fill="#38bdf8" font-size="20" font-family="sans-serif" font-weight="bold">LAM 3.0 STAGE 2 - P&amp;ID SCHEMATIC (TEAM DISTRO)</text>
   <rect x="70" y="100" width="120" height="200" fill="none" stroke="#0284c7" stroke-width="3" rx="6" />
   <text x="130" y="190" fill="#0284c7" font-size="14" text-anchor="middle">TK-01 (10L)</text>
@@ -1737,17 +1742,14 @@
 </svg>`;
       const blob = new Blob([svgContent], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'TEAM_DISTRO_PID_Schematic.svg';
-      a.click();
+      const a = document.createElement('a'); a.href = url;
+      a.download = 'TEAM_DISTRO_PID_Schematic.svg'; a.click();
     });
 
     /* =========================================================================
-       10. MAIN ANIMATION LOOP
+       10. MAIN ANIMATION & RENDERING LOOP
        ========================================================================= */
     const clock = new THREE.Clock();
-
     function animate() {
       requestAnimationFrame(animate);
       let dt = clock.getDelta();
