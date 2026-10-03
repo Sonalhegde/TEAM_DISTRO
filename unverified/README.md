@@ -67,7 +67,7 @@ unverified/
 
 ## 4. Serial Studio DAQ Telemetry Integration
 
-The firmware streams telemetry frames every 500 ms matching `telemetry/serial_studio_project.json`:
+The firmware streams telemetry frames every 500 ms matching the project definition in [`telemetry/serial_studio_project.json`](file:///d:/TEAM_DISTRO/telemetry/serial_studio_project.json):
 
 ```
 /*<Time_ms>,<State_ID>,<Freq_Hz>,<Flow_Lpm>,<Flow_Mls>,<Total_L>,<Sump_Alarm>*/\r\n
@@ -81,6 +81,41 @@ The firmware streams telemetry frames every 500 ms matching `telemetry/serial_st
 5. **Flow Rate (mL/s):** Instantaneous flow rate (`0.0 - 100.0 mL/s`).
 6. **Total Transferred Volume:** Cumulative volume (`0.0 - 10.0 Liters`).
 7. **Sump High Level Alarm:** Digital status (`0` = OK, `1` = Level breach / high surcharge).
+
+### 4.1 Step-by-Step Instructions: Importing JSON into Serial Studio
+
+Follow these steps to connect your ESP32 to Serial Studio and visualize real-time hydraulics:
+
+1. **Install Serial Studio:**
+   - Download the latest release from [Serial Studio GitHub Releases](https://github.com/Serial-Studio/Serial-Studio/releases) (or install via installer / portable `.exe`).
+2. **Launch Serial Studio:**
+   - Run Serial Studio on your workstation.
+3. **Import Project Configuration JSON:**
+   - In Serial Studio, click the **Project** / **Setup** menu (or click **Open Project** / press `Ctrl+O`).
+   - Navigate to the repository and select:
+     ```
+     d:\TEAM_DISTRO\telemetry\serial_studio_project.json
+     ```
+     *(Relative path from `unverified/`: `../telemetry/serial_studio_project.json`)*
+   - Serial Studio will automatically load the project title **"Lam Stage 2 Hydraulic Process Controller"** along with configured widgets:
+     - **Flow Rate (L/min)**: Circular dial gauge (0 - 6 L/min).
+     - **Flow Rate (mL/s)**: Time-series live line chart.
+     - **Total Transferred Volume**: Linear bar progress gauge (0 - 10 L).
+     - **Pulse Frequency**: Real-time frequency graph (Hz).
+     - **Sump High Level Alarm**: Digital alarm status LED.
+     - **State ID**: Controller finite-state indicator.
+4. **Configure Serial Port Connection:**
+   - Click on the **Connection Settings** / **Serial** tab on the left sidebar:
+     - **Port:** Select your ESP32 COM port (e.g. `COM3`, `COM4`, or `/dev/ttyUSB0`).
+     - **Baud Rate:** `115200`.
+     - **Data Bits:** `8`.
+     - **Parity:** `None`.
+     - **Stop Bits:** `1`.
+     - **Flow Control:** `None`.
+5. **Start Data Acquisition:**
+   - Click the **Connect** (Play / Connect) button in the top toolbar.
+   - Switch to the **Dashboard** view to monitor live analog dials, plots, and status LEDs.
+   - Use the **Console** view to inspect raw telemetry frames (`/*...*/`) or send CLI commands (`s1`, `s2`, `x`, `sp 3.5`, etc.).
 
 ---
 
