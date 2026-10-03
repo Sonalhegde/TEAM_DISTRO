@@ -1,44 +1,59 @@
-﻿# Unverified Test Controller - Lam Research Challenge 3.0 (Stage 2)
+# ESP32 Process Controller & Serial Studio DAQ (Espressif Format)
 
-**Status:** Unverified Hardware Bring-Up / Multi-Case Controller  
+**Project:** Lam Research Challenge 3.0 (Stage 2: Practical Engineering Challenge)  
+**Team:** TEAM DISTRO (LRC-26-0528)  
 **Microcontroller:** ESP32 (NodeMCU-32S / ESP32-DevKitC)  
 **PCB Schematic:** LAM Stage 2 PCB Rev 1.0  
+**Format:** Native Espressif C++ / ESP-IDF & PlatformIO  
 
 ---
 
-## Overview
+## 1. Overview & Project Layout
 
-This firmware implements an integrated non-blocking state machine for the dual-mode process rig without using `delay()`. It manages closed-loop PI flow control for liquid dispensing and an automated multi-pump sequence for post-process flushing.
+This controller has been converted from the legacy `.ino` sketch to standard Espressif format (`CMakeLists.txt`, `main/main.cpp`, and `platformio.ini`). It executes an asynchronous, non-blocking finite state machine (zero `delay()`) providing closed-loop PI flow control, dual-mode operation (Case 1 & Case 2), safety fault interlocks, and live telemetry streaming for **Serial Studio Data Acquisition (DAQ)**.
 
-### Operational Modes
+### Directory Structure
+```
+unverified/
+├── CMakeLists.txt         # Root ESP-IDF CMakeLists
+├── main/
+│   ├── CMakeLists.txt     # Component CMakeLists
+│   └── main.cpp           # Native C++ application & DAQ engine
+├── platformio.ini         # PlatformIO build configuration
+└── README.md              # Hardware & operations guide
+```
 
-#### Case 1: Control + Measurement (Sump Level & Flow Hold)
-- **Trigger:** Sump float switch trips `HIGH` (`PIN_FSW` / GPIO35).
+---
+
+## 2. Operational Modes
+
+### Case 1: Closed-Loop Recirculation & Sump Level Regulation
+- **Trigger:** Sump float switch trips `HIGH` (`PIN_FSW` / GPIO35) or manual command `s1`.
 - **Action:**
   - Solenoid valve (`PIN_SV` / GPIO27) opens immediately.
-  - Pump 1 (`C1_PUMP_MASK = 0b001`) starts instantly at 70% PWM duty.
-  - PI velocity control loop adjusts PWM duty (clamped 30% - 100%) to maintain exactly **3.0 L/min** via YF-S401 Hall-effect feedback.
+  - Feed Pump 1 starts instantly at 70% PWM duty.
+  - PI velocity control loop adjusts PWM duty (clamped 30% - 100%) to maintain exactly **3.0 L/min** via YF-S401 feedback.
   - Pulse counter continuously integrates totalized discharge volume (`totalL`).
 - **Shutdown:** When the float drops `LOW` (empty sump), the pump stops instantly and the solenoid valve closes.
 - **Safety Interlock:** If the pump runs for >4s (`C1_GRACE_MS`) and measured flow is <0.3 L/min for >6s (`C1_NOFLOW_FAULT_MS`), a `FAULT` state trips to prevent dry-running or line over-pressurization.
 
-#### Case 2: Flush + Shutdown
-- **Trigger:** Manual long-press on tactile switch or serial command `s2`.
+### Case 2: Multi-Pump Rig Flush & Automated Safe Shutdown
+- **Trigger:** Manual long-press on tactile switch (>= 1.5s) or serial command `s2`.
 - **Action:**
   - Solenoid valve opens.
-  - All three pumps (P1, P2, P3 via `C2_PUMP_MASK = 0b111`) run concurrently at 80% duty.
-- **Shutdown:** When the flush reservoir empties and flow drops below 0.3 L/min for 3 seconds (`C2_EXHAUST_MS`), all pumps de-energize. 500 ms later, the solenoid valve closes and the rig transitions to `IDLE`.
+  - All three pumps (P1, P2, P3) run concurrently at 80% duty.
+- **Shutdown:** When the flush reservoir empties and flow drops below 0.3 L/min for 3 seconds (`C2_EXHAUST_MS`), all pumps de-energize. 500 ms later, the solenoid valve closes to eliminate hydraulic water hammer, and the rig transitions to `IDLE`.
 - **Timeout:** Global safety timeout of 10 minutes (`C2_MAX_RUN_MS`).
 
 ---
 
-## Hardware Pin Connections
+## 3. Hardware Pin Connections (PCB Rev 1.0)
 
-| Function | ESP32 GPIO | Connected Component | Notes |
+| Function | ESP32 GPIO | Connected Component | Description |
 |---|---|---|---|
 | **SW** | GPIO34 | ON/OFF Tactile Switch | Input-only, 10k external pull-up on PCB, Active LOW |
 | **FSW** | GPIO35 | Sump Float Switch | Input-only, 10k external pull-up on PCB |
-| **FS** | GPIO14 | YF-S401 Flow Sensor Pulse | Interrupt attached (`RISING`), Internal pull-up |
+| **FS** | GPIO14 | YF-S401 Flow Sensor | Interrupt attached (`RISING`), Internal pull-up |
 | **SV** | GPIO27 | Solenoid Valve Driver | Low-side MOSFET gate driver PWM/IN |
 | **LED** | GPIO2 | Status LED | Onboard Blue LED (indicates state via blink patterns) |
 | **Pump 1 L_EN / R_EN** | GPIO13 / GPIO26 | BTS7960 Driver #1 | Half-bridge enable lines |
@@ -50,38 +65,54 @@ This firmware implements an integrated non-blocking state machine for the dual-m
 
 ---
 
-## Tactile Switch Operations (GPIO34)
+## 4. Serial Studio DAQ Telemetry Integration
 
-- **IDLE State:**
-  - **Short Press (< 1.5s):** Arm Case 1 (Auto level & flow control).
-  - **Long Press (>= 1.5s):** Start Case 2 (Full rig flush).
-- **RUNNING State:**
-  - **Any Press:** Emergency stop — shuts down all pumps and closes solenoid valve.
-- **FAULT State:**
-  - **Any Press:** Reset fault condition and return to `IDLE`.
+The firmware streams telemetry frames every 500 ms matching `telemetry/serial_studio_project.json`:
+
+```
+/*<Time_ms>,<State_ID>,<Freq_Hz>,<Flow_Lpm>,<Flow_Mls>,<Total_L>,<Sump_Alarm>*/\r\n
+```
+
+### Dataset Index Mapping:
+1. **Time Since Boot:** Milliseconds elapsed since ESP32 startup (`ms`).
+2. **System State ID:** Integer code (`0`=IDLE, `1`=C1_STANDBY, `2`=C1_PUMPING, `3`=C2_FLUSH, `4`=C2_STOPPING, `5`=FAULT).
+3. **Pulse Frequency:** Hall sensor pulse rate (`Hz`).
+4. **Flow Rate (L/min):** Instantaneous flow rate (`0.0 - 6.0 L/min`).
+5. **Flow Rate (mL/s):** Instantaneous flow rate (`0.0 - 100.0 mL/s`).
+6. **Total Transferred Volume:** Cumulative volume (`0.0 - 10.0 Liters`).
+7. **Sump High Level Alarm:** Digital status (`0` = OK, `1` = Level breach / high surcharge).
 
 ---
 
-## Serial Console Commands (115200 Baud)
+## 5. Serial CLI Commands (115200 Baud)
 
 | Command | Action |
 |---|---|
-| `s1` | Start Case 1 (Control + Measurement) |
-| `s2` | Start Case 2 (Flush + Shutdown) |
-| `x` | Emergency stop (All OFF) |
-| `sp <L/min>` | Set target flow rate (range: 1.0 to 6.0 L/min, e.g. `sp 3.5`) |
+| `s1` | Arm Case 1 (Closed-Loop Level Regulation) |
+| `s2` | Start Case 2 (Multi-Pump Line Purge) |
+| `x` | Emergency Stop (All actuators OFF immediately) |
+| `sp <L/min>` | Set target flow rate setpoint (e.g. `sp 3.5`) |
 | `ppl <pulses>` | Update flow sensor pulses per litre calibration factor |
-| `cal0` | Zero pulse counter for calibration run |
+| `cal0` | Zero pulse counter for volumetric calibration |
 | `cal <litres>` | Compute new `ppl` calibration factor after dispensing known volume |
-| `rt` | Reset totalizer volume to 0.000 L |
+| `rt` | Reset discharged volume totalizer to 0.000 L |
+| `status` | Print human-readable hardware telemetry status |
 | `?` | Print command help menu |
 
 ---
 
-## Status LED Indicators
+## 6. How to Build & Flash
 
-- **IDLE:** Slow heartbeat blink (80 ms pulse every 1 s).
-- **CASE 1 STANDBY:** Solid ON (armed, awaiting high sump level).
-- **CASE 1 PUMPING:** Rapid 2 Hz toggle.
-- **CASE 2 FLUSH:** 1 Hz toggle.
-- **FAULT:** Rapid strobe (50 ms on, 50 ms off).
+### Option A: Using PlatformIO CLI
+```powershell
+pio run -d d:\TEAM_DISTRO\unverified --target upload
+pio device monitor -d d:\TEAM_DISTRO\unverified -b 115200
+```
+
+### Option B: Using ESP-IDF CMake
+```bash
+cd unverified
+idf.py set-target esp32
+idf.py build
+idf.py -p COM3 flash monitor
+```

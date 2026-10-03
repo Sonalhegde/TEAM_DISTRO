@@ -1,0 +1,7 @@
+.pio/
+.vscode/
+__pycache__/
+*.pyc
+telemetry_log.csv
+build/
+sdkconfig
