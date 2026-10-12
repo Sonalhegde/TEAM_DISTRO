@@ -69,10 +69,10 @@ TEAM_DISTRO/
 ├── index.html                          # Interactive 3D Digital Twin simulation (WebGL / Three.js)
 ├── 3DPRINT/                            # 3D printable mechanical files & documentation
 │   ├── README.md                       # 3D print guide with image gallery & slicer specs
-│   ├── stl/                            # Individual STL CAD models
-│   │   ├── smps_clamp.stl              # 12V SMPS mounting bracket
-│   │   ├── pcb_mounting_clamp.stl      # Elevated PCB standoff foot clamp
-│   │   └── pipe_mounting_clamp.stl     # 8mm fluid tubing guide clamp
+│   ├── stl/                            # AutoCAD STL 3D models
+│   │   ├── smps clamp.stl              # 12V SMPS mounting bracket
+│   │   ├── PCB foot01.stl              # Elevated PCB standoff foot clamp
+│   │   └── pipe clamp.stl              # 8mm fluid tubing guide clamp
 │   └── images/                         # Visual renders of 3D printed components
 │       ├── smps_clamp_iso.png
 │       ├── smps_clamp_top.png

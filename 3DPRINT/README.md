@@ -15,7 +15,7 @@
 
 ## 📌 Overview
 
-This directory contains the 3D-printable CAD models (`.stl` files) and mounting fixtures designed for the **TEAM DISTRO** automated liquid-handling and recirculation testbed. These components ensure rigid, vibration-resistant, and chemically isolated mounting for electrical supplies, control PCBs, and hydraulic piping.
+This directory contains the AutoCAD-designed 3D-printable CAD models (`.stl` files) and mounting fixtures created for the **TEAM DISTRO** automated liquid-handling and recirculation testbed. These fixtures ensure rigid, vibration-resistant, and chemically isolated mounting for electrical supplies, control PCBs, and hydraulic piping.
 
 ---
 
@@ -23,16 +23,16 @@ This directory contains the 3D-printable CAD models (`.stl` files) and mounting 
 
 | Component | STL File | Quantity | Purpose |
 |---|---|:---:|---|
-| **SMPS Clamp** | [`stl/smps_clamp.stl`](stl/smps_clamp.stl) | 1 | Mounts and secures the 12V DC power supply unit with ventilation windows |
-| **PCB Foot / Mounting Clamp** | [`stl/pcb_mounting_clamp.stl`](stl/pcb_mounting_clamp.stl) | 4 | Elevated standoff feet to isolate and mount the control circuit PCB |
-| **Pipe / Tubing Clamp** | [`stl/pipe_mounting_clamp.stl`](stl/pipe_mounting_clamp.stl) | Multiple | Secures and routes 8mm hydraulic tubing cleanly to eliminate vibration and kinking |
+| **SMPS Clamp** | [`stl/smps clamp.stl`](stl/smps%20clamp.stl) | 1 | Mounts and secures the 12V DC power supply unit with ventilation windows |
+| **PCB Foot / Mounting Clamp** | [`stl/PCB foot01.stl`](stl/PCB%20foot01.stl) | 4 | Elevated standoff feet to isolate and mount the control circuit PCB |
+| **Pipe / Tubing Clamp** | [`stl/pipe clamp.stl`](stl/pipe%20clamp.stl) | Multiple | Secures and routes 8mm hydraulic tubing cleanly to eliminate vibration and kinking |
 
 ---
 
 ## 🛠️ Component Details & Image Gallery
 
 ### 1. SMPS Mounting Clamp
-Custom ventilated rectangular bracket designed to firmly clamp the 12V SMPS (Switched-Mode Power Supply) to the rig's acrylic/wooden baseplate. Includes thermal dissipation cutouts to prevent overheating during continuous pump operation.
+Custom ventilated rectangular bracket designed to firmly clamp the 12V SMPS (Switched-Mode Power Supply) to the rig's mounting baseplate. Includes thermal dissipation cutouts to prevent overheating during continuous pump operation.
 
 <div align="center">
 <table>
@@ -47,10 +47,10 @@ Custom ventilated rectangular bracket designed to firmly clamp the 12V SMPS (Swi
 </table>
 </div>
 
-- **File:** [`stl/smps_clamp.stl`](stl/smps_clamp.stl)
+- **File:** [`stl/smps clamp.stl`](stl/smps%20clamp.stl)
 - **Features:**
   - 4 large ventilation cutouts for natural airflow and heat dissipation.
-  - Recessed corner screw holes and retention slots for zip-ties / M3 hardware.
+  - Recessed corner screw holes and retention slots for fasteners / zip-ties.
   - Flush perimeter lip to prevent lateral sliding of the power supply unit.
 
 ---
@@ -71,7 +71,7 @@ Rigid elevated standoff designed to mount the custom ESP32 control board and H-b
 </table>
 </div>
 
-- **File:** [`stl/pcb_mounting_clamp.stl`](stl/pcb_mounting_clamp.stl)
+- **File:** [`stl/PCB foot01.stl`](stl/PCB%20foot01.stl)
 - **Features:**
   - L-shaped offset geometry allowing easy access for screwdriver assembly.
   - Cylindrical standoff pillar with screw hole for PCB corner mounting.
@@ -93,7 +93,7 @@ Curved guide clamp designed to secure 8mm outer-diameter polyurethane/silicone f
 </table>
 </div>
 
-- **File:** [`stl/pipe_mounting_clamp.stl`](stl/pipe_mounting_clamp.stl)
+- **File:** [`stl/pipe clamp.stl`](stl/pipe%20clamp.stl)
 - **Features:**
   - Smooth cylindrical collar preventing pinch points or constriction of liquid flow.
   - Right-angled chassis mounting arm with pre-drilled screw hole for quick panel attachment.
@@ -114,5 +114,5 @@ Curved guide clamp designed to secure 8mm outer-diameter polyurethane/silicone f
 ---
 
 <div align="center">
-<sub>Designed and fabricated by <b>TEAM DISTRO</b> for Lam Research Challenge 3.0</sub>
+<sub>Designed in AutoCAD and fabricated by <b>TEAM DISTRO</b> for Lam Research Challenge 3.0</sub>
 </div>
