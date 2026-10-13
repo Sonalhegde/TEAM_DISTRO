@@ -66,7 +66,15 @@ This repository contains the complete firmware, hardware documentation, telemetr
 ```
 TEAM_DISTRO/
 ├── README.md                           # Master project documentation & system overview
-├── index.html                          # Interactive 3D Digital Twin simulation (WebGL / Three.js)
+├── index.html                          # Main 3D Digital Twin simulation (deployed from simulation/)
+├── app.js                              # Simulation UI, interactive controls & charts
+├── scene.js                            # Three.js 3D rig scene, models & animations
+├── sim.js                              # Dynamic hydraulic simulation & FSM controller
+├── tests.js                            # Automated validation test suite (TC-01 to TC-16)
+├── run-tests.js                        # Headless test runner (Node.js)
+├── three.min.js                        # Bundled Three.js engine (offline-ready)
+├── simulation/                         # Modular simulation source directory
+├── old_simulation/                     # Archived previous simulation version
 ├── 3DPRINT/                            # 3D printable mechanical files & documentation
 │   ├── README.md                       # 3D print guide with image gallery & slicer specs
 │   ├── stl/                            # AutoCAD STL 3D models
