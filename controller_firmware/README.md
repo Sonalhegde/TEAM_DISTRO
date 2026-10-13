@@ -4,22 +4,24 @@
 **Team:** TEAM DISTRO (LRC-26-0528)  
 **Microcontroller:** ESP32 (NodeMCU-32S / ESP32-DevKitC)  
 **PCB Schematic:** LAM Stage 2 PCB Rev 1.0  
-**Format:** Native Espressif C++ / ESP-IDF & PlatformIO  
+**Format:** Native Espressif C++ / ESP-IDF (CMake)
 
 ---
 
 ## 1. Overview & Project Layout
 
-This controller has been converted from the legacy `.ino` sketch to standard Espressif format (`CMakeLists.txt`, `main/main.cpp`, and `platformio.ini`). It executes an asynchronous, non-blocking finite state machine (zero `delay()`) providing closed-loop PI flow control, dual-mode operation (Case 1 & Case 2), safety fault interlocks, and live telemetry streaming for **Serial Studio Data Acquisition (DAQ)**.
+This controller has been converted from the legacy `.ino` sketch to native Espressif ESP-IDF format (`CMakeLists.txt`, `sdkconfig.defaults`, and `main/`). It executes an asynchronous, non-blocking finite state machine (zero `delay()`) providing closed-loop PI flow control, dual-mode operation (Case 1 & Case 2), safety fault interlocks, and live telemetry streaming for **Serial Studio Data Acquisition (DAQ)**.
 
 ### Directory Structure
 ```
-unverified/
+controller_firmware/
 ├── CMakeLists.txt         # Root ESP-IDF CMakeLists
+├── platformio.ini         # PlatformIO build configuration
+├── sdkconfig.defaults     # ESP-IDF configuration defaults
 ├── main/
 │   ├── CMakeLists.txt     # Component CMakeLists
+│   ├── idf_component.yml  # ESP-IDF Component Manager manifest
 │   └── main.cpp           # Native C++ application & DAQ engine
-├── platformio.ini         # PlatformIO build configuration
 └── README.md              # Hardware & operations guide
 ```
 
@@ -94,9 +96,9 @@ Follow these steps to connect your ESP32 to Serial Studio and visualize real-tim
    - In Serial Studio, click the **Project** / **Setup** menu (or click **Open Project** / press `Ctrl+O`).
    - Navigate to the repository and select:
      ```
-     d:\TEAM_DISTRO\telemetry\serial_studio_project.json
+     telemetry/serial_studio_project.json
      ```
-     *(Relative path from `unverified/`: `../telemetry/serial_studio_project.json`)*
+     *(Relative path from `controller_firmware/`: `../telemetry/serial_studio_project.json`)*
    - Serial Studio will automatically load the project title **"Lam Stage 2 Hydraulic Process Controller"** along with configured widgets:
      - **Flow Rate (L/min)**: Circular dial gauge (0 - 6 L/min).
      - **Flow Rate (mL/s)**: Time-series live line chart.
@@ -138,16 +140,18 @@ Follow these steps to connect your ESP32 to Serial Studio and visualize real-tim
 
 ## 6. How to Build & Flash
 
-### Option A: Using PlatformIO CLI
+### Option A: Using PlatformIO (Recommended)
+You can build and flash directly from this folder using PlatformIO:
 ```powershell
-pio run -d d:\TEAM_DISTRO\unverified --target upload
-pio device monitor -d d:\TEAM_DISTRO\unverified -b 115200
+pio run -d controller_firmware --target upload
+pio device monitor -d controller_firmware -b 115200
 ```
+*(Also mirrors in `D:\TEAM_DISTRO_PIO`)*
 
-### Option B: Using ESP-IDF CMake
+### Option B: Using ESP-IDF (Native CMake)
 ```bash
-cd unverified
+cd controller_firmware
 idf.py set-target esp32
 idf.py build
-idf.py -p COM3 flash monitor
+idf.py -p COM4 flash monitor
 ```

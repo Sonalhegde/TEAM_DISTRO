@@ -6,7 +6,7 @@
 ![Status](https://img.shields.io/badge/Status-Complete-success?style=for-the-badge)
 [![Live 3D Simulation](https://img.shields.io/badge/Live%20Simulation-3D%20Digital%20Twin-brightgreen?style=for-the-badge&logo=three.js)](https://sonalhegde.github.io/TEAM_DISTRO/)
 ![Controller](https://img.shields.io/badge/Controller-ESP32%20NodeMCU-red?style=for-the-badge&logo=espressif)
-![Firmware](https://img.shields.io/badge/Firmware-C%2B%2B%20%2F%20Arduino-teal?style=for-the-badge&logo=arduino)
+![Firmware](https://img.shields.io/badge/Firmware-Native%20ESP--IDF%20C%2B%2B-teal?style=for-the-badge&logo=espressif)
 ![Python DAQ](https://img.shields.io/badge/DAQ-Python%203.13-yellow?style=for-the-badge&logo=python)
 
 ### **Team DISTRO**
@@ -48,20 +48,20 @@ Design, build, commission, and validate an automated small-scale fluid handling 
 
 ---
 
-## 3. Hardware and Sensor Components
+## 3. Hardware and Sensor Components (LAM Stage 2 PCB Rev 1.0)
 
-| Tag | Component | Function | Interface / GPIO |
-|---|---|---|:---:|
-| `U7` | ESP32 NodeMCU-32S | 32-bit dual-core microcontroller running FreeRTOS state engine | Core Controller |
-| `FT-01` | Hall-Effect Flow Sensor | Measures pulse frequency to determine volumetric flow rate | GPIO 35 (Interrupt) |
-| `LS-01` | Float Level Switch | Detects high liquid level in the sump tank to trigger interlock | GPIO 34 (Digital In) |
-| `OV-01` | 12 V Solenoid Valve | Isolates the 10 L process reservoir during flushing | GPIO 25 (Digital Out) |
-| `P-01` | 12 V DC Diaphragm Pump | Feeds fluid from 10 L tank to the sump (50% PWM) | GPIO 18 (PWM Ch 0) |
-| `P-02` | 12 V DC Diaphragm Pump | Returns fluid from sump to 10 L tank (100% PWM) | GPIO 19 (PWM Ch 1) |
-| `P-03` | 12 V DC Diaphragm Pump | Delivers DI water from flush tank during Case 2 | GPIO 21 (PWM Ch 2) |
-| `U2, U3, U4` | H-Bridge Motor Drivers | Amplifies logic PWM signals to drive 12 V pump motors | Driver Modules |
-| `BV-01, BV-02` | 2-Way Manual Ball Valves | BV-01 controls flush inlet; BV-02 controls throttling | Manual Valves |
-| `SMPS` | 12 V DC Power Supply | Supplies DC power to pumps, solenoid, and PCB logic rails | Mains Supply |
+| Tag | Component | Function | ESP32 GPIO | Electrical Characteristic |
+|---|---|---|:---:|---|
+| `U7` | ESP32 NodeMCU-32S | 32-bit dual-core microcontroller running native FreeRTOS state engine | Core Controller | 3V3 / 5V Logic rails |
+| `SW` | Master Run Switch | Manual SPST toggle switch / push button | GPIO 34 | Input-only, 10 kΩ pull-up, Active LOW |
+| `FSW` / `LS-01` | Sump Float Switch | Detects high liquid level in sump tank to trigger interlock | GPIO 35 | Input-only, 10 kΩ pull-up |
+| `FS` / `FT-01` | Flow Sensor (YF-S401) | Micro-turbine pulse frequency sensor ($K \approx 6,155\text{ pulses/L}$) | GPIO 14 | Interrupt attached, internal pull-up |
+| `SV` / `OV-01` | Solenoid Valve Driver | Isolates 10 L process reservoir during Case 2 flushing | GPIO 27 | Active HIGH = Open, LOW = Closed |
+| `U2` (Pump 1) | BTS7960 Motor Driver #1 | Feeds liquid from 10 L tank into sump (50% PWM nominal) | L_EN: 13, R_EN: 26<br>L_PWM: 32, R_PWM: 33 | 20 kHz PWM, 8-bit |
+| `U3` (Pump 2) | BTS7960 Motor Driver #2 | Returns liquid from sump to 10 L process reservoir | L_EN: 16, R_EN: 17<br>L_PWM: 18, R_PWM: 19 | 20 kHz PWM, 8-bit |
+| `U4` (Pump 3) | BTS7960 Motor Driver #3 | Delivers DI flush liquid during Case 2 line purge | L_EN: 21, R_EN: 22<br>L_PWM: 23, R_PWM: 25 | 20 kHz PWM, 8-bit |
+| `LED` | Status LED | Onboard Blue LED indicator for states and alarms | GPIO 2 | State blink patterns |
+| `BV-01, BV-02` | 2-Way Manual Ball Valves | BV-01 throttles return line; BV-02 isolates flush reservoir | Manual Valves | Plumbing network |
 
 Detailed pin assignments are in [`docs/hardware-wiring-guide.md`](docs/hardware-wiring-guide.md).
 
@@ -69,26 +69,46 @@ Detailed pin assignments are in [`docs/hardware-wiring-guide.md`](docs/hardware-
 
 ## 4. Quick Start
 
-### Run the 3D Digital Twin Simulation
+### 1. Run the 3D Digital Twin Simulation
 - **Live Online:** **[https://sonalhegde.github.io/TEAM_DISTRO/](https://sonalhegde.github.io/TEAM_DISTRO/)**
 - **Offline:** Open [`simulation/web/index.html`](simulation/web/index.html) in any modern web browser.
 
-### Run Automated Simulation Tests
+### 2. Run Automated Simulation Tests
 Run the headless Node.js verification test suite:
 ```bash
 node tests/simulation/run-tests.js
 ```
 All 16 test cases verify automatically.
 
-### Upload Controller Firmware
-- **Arduino IDE:** Open [`firmware/arduino/team_distro_esp32.ino`](firmware/arduino/team_distro_esp32.ino) and upload to your ESP32 board.
-- **PlatformIO:** Open [`firmware/platformio/`](firmware/platformio/) and run `pio run -t upload`.
+### 3. Build & Flash Production Controller Firmware
+The controller firmware is located in [`controller_firmware/`](controller_firmware/).
 
-### Run Telemetry Logger
-```bash
-pip install -r telemetry/requirements.txt
-python telemetry/data_logger.py --port COM3
+**1-Click Automated Batch Scripts (Windows):**
+```cmd
+.\esp_build.bat
+.\esp_flash.bat
 ```
+
+**Using ESP-IDF Native CLI:**
+```bash
+cd controller_firmware
+idf.py set-target esp32
+idf.py build
+idf.py -p COM4 flash monitor
+```
+
+### 4. Hardware Verification & Testing Procedure
+Follow the step-by-step testing manual:
+- **Testing Manual:** [`TESTING_PROCEDURE.md`](TESTING_PROCEDURE.md)
+- **Comprehensive Guide:** [`docs/COMPLETE_TESTING_PROCEDURE.md`](docs/COMPLETE_TESTING_PROCEDURE.md)
+
+### 5. Run Telemetry & Serial Studio DAQ
+- **Serial Studio:** Open [`telemetry/serial_studio_project.json`](telemetry/serial_studio_project.json) in Serial Studio at `115200` baud.
+- **Python Logger:**
+  ```bash
+  pip install -r telemetry/requirements.txt
+  python telemetry/data_logger.py --port COM3
+  ```
 
 ---
 
@@ -98,45 +118,58 @@ python telemetry/data_logger.py --port COM3
 TEAM_DISTRO/
 ├── .github/
 │   └── workflows/
-│       └── pages.yml         # GitHub Pages automated deployment workflow
-├── README.md                 # Project overview, problem statement, team, links
-├── TEAM.md                   # Team members, roles, departments, contributions
-├── LICENSE                   # Software license terms
+│       └── pages.yml             # GitHub Pages automated deployment workflow
+├── README.md                     # Project overview, problem statement, team, links
+├── TEAM.md                       # Team members, roles, departments, contributions
+├── TESTING_PROCEDURE.md          # Hardware testing procedure quick link
+├── LICENSE                       # Software license terms
 ├── .gitignore
-├── docs/                     # System design reports and guides
-│   ├── README.md             # Documentation index
-│   ├── technical-report.md   # Engineering report with derivations
+├── esp_build.bat                 # 1-Click build script for controller firmware
+├── esp_flash.bat                 # 1-Click flash and monitor script for controller firmware
+├── TEAM_DISTRO.code-workspace    # VS Code unified workspace
+├── controller_firmware/          # Production Native ESP-IDF C++ controller firmware
+│   ├── CMakeLists.txt            # Root ESP-IDF CMakeLists
+│   ├── sdkconfig.defaults        # ESP-IDF configuration defaults
+│   ├── dependencies.lock         # ESP-IDF component dependencies lock
+│   ├── README.md                 # Firmware architecture, CLI commands, and pinout guide
+│   ├── CHANGES.md                # Changes and verification log
+│   ├── main/
+│   │   ├── CMakeLists.txt        # Component CMakeLists
+│   │   ├── idf_component.yml     # ESP-IDF component manager manifest
+│   │   └── main.cpp              # Native C++ application & DAQ engine
+│   └── tools/
+│       ├── esp_quick.py          # Quick build/flash helper tool
+│       └── pre_flash.bat         # Pre-flash environment verification
+├── docs/                         # System design reports and guides
+│   ├── README.md                 # Documentation index
+│   ├── technical-report.md       # Engineering report with derivations
 │   ├── pid-design-specification.md
 │   ├── calibration-and-analysis.md
 │   ├── fault-analysis-fmea.md
 │   ├── hardware-wiring-guide.md
-│   ├── diagrams/             # P&ID and electrical schematics
-│   └── figures/              # Plots and calibration figures
-├── firmware/                 # Microcontroller source code
-│   ├── README.md             # Firmware architecture guide
-│   ├── arduino/              # Single-file Arduino IDE firmware sketch
-│   ├── platformio/           # Modular C++ PlatformIO project
-│   └── esp-idf-experimental/ # Experimental native ESP-IDF C++ implementation
+│   ├── COMPLETE_TESTING_PROCEDURE.md # Full testing procedure manual
+│   ├── diagrams/                 # P&ID and electrical schematics
+│   └── figures/                  # Plots and calibration figures
 ├── hardware/
-│   └── 3d-print/             # 3D printable CAD models and specifications
-│       ├── README.md         # Component index and slicer settings
-│       ├── stl/              # Individual STL files
-│       └── images/           # CAD blueprints and 3D visual renders
-├── simulation/               # 3D digital twin package
-│   ├── README.md             # Simulation architecture and user guide
-│   ├── web/                  # HTML5/WebGL interactive simulation
-│   ├── vendor/               # Three.js 3D rendering engine
-│   └── archive/              # Earlier simulation build
-├── tests/                    # Verification test suites
-│   ├── README.md             # Test catalog and run instructions
-│   ├── simulation/           # Headless Node.js test suite (TC-01 to TC-16)
-│   └── firmware-bench/       # Physical rig component test sketches
-└── telemetry/                # Python data logging and DAQ tools
-    ├── README.md             # Telemetry usage and setup instructions
-    ├── data_logger.py        # Real-time serial data logger
-    ├── calibration_tool.py   # Regression solver
-    ├── generate_plots.py     # Plot generator
-    ├── requirements.txt      # Python dependencies
+│   └── 3d-print/                 # 3D printable CAD models and specifications
+│       ├── README.md             # Component index and slicer settings
+│       ├── stl/                  # Individual STL files
+│       └── images/               # CAD blueprints and 3D visual renders
+├── simulation/                   # 3D digital twin package
+│   ├── README.md                 # Simulation architecture and user guide
+│   ├── web/                      # HTML5/WebGL interactive simulation
+│   ├── vendor/                   # Three.js 3D rendering engine
+│   └── archive/                  # Earlier simulation build
+├── tests/                        # Verification test suites
+│   ├── README.md                 # Test catalog and run instructions
+│   ├── simulation/               # Headless Node.js test suite (TC-01 to TC-16)
+│   └── firmware-bench/           # Physical rig component test sketches & diagnostics
+└── telemetry/                    # Python data logging and DAQ tools
+    ├── README.md                 # Telemetry usage and setup instructions
+    ├── data_logger.py            # Real-time serial data logger
+    ├── calibration_tool.py       # Regression solver
+    ├── generate_plots.py         # Plot generator
+    ├── requirements.txt          # Python dependencies
     └── serial_studio_project.json # Serial Studio dashboard profile
 ```
 

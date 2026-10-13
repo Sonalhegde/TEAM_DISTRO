@@ -14,6 +14,8 @@ This directory contains the engineering documentation for the liquid-handling ri
   Risk assessment matrix and root-cause troubleshooting table for conditions A through E.
 - [Hardware Wiring and Commissioning Guide](hardware-wiring-guide.md)
   Electrical connection table, ESP32 GPIO pinout, and step-by-step cold-check sequence.
+- [Complete Testing Procedure Manual](COMPLETE_TESTING_PROCEDURE.md)
+  Unabridged physical rig testing checklist, Case 1 & Case 2 validation protocol, and CLI diagnostics.
 
 ## Figures and Diagrams
 
