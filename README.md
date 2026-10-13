@@ -73,12 +73,12 @@ TEAM_DISTRO/
 │   │   ├── smps clamp.stl              # 12V SMPS mounting bracket
 │   │   ├── PCB foot01.stl              # Elevated PCB standoff foot clamp
 │   │   └── pipe clamp.stl              # 8mm fluid tubing guide clamp
-│   └── images/                         # Visual renders of 3D printed components
-│       ├── smps_clamp_iso.png
-│       ├── smps_clamp_top.png
-│       ├── pcb_clamp_view1.png
-│       ├── pcb_clamp_view2.png
-│       └── pipe_clamp_iso.png
+│   └── images/                         # CAD blueprints, dimensions & 3D renders
+│       ├── smps_clamp_dimensions.png
+│       ├── smps_clamp_cad_3d.png
+│       ├── pcb_clamp_dimensions.png
+│       ├── pcb_clamp_cad_3d.png
+│       └── pipe_clamp_cad_3d.png
 ├── firmware/                           # Control firmware for ESP32
 │   ├── team_distro_esp32.ino           # Single-file Arduino IDE firmware sketch
 │   ├── platformio.ini                  # PlatformIO build configuration
