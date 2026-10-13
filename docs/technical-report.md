@@ -46,7 +46,7 @@ The hydraulic flow path is structured into two functional operational modes:
    - **Multi-Pump Flush Operation:** Pump-03 feeds fresh DI/flush water into the Equal Tee junction. All three pumps (**Pump-01, Pump-02, and Pump-03**) operate simultaneously to condition and purge lines of chemical residue and particulate debris.
    - **Automated Safe Shutdown:** As soon as the 4.2L flush volume is exhausted (sensed by cumulative totalizer reaching 4.2L or persistent zero-flow condition), all pumps and actuators safely transition to the **OFF** state without human intervention.
 
-*Visual Reference:* See the complete [P&ID Diagram](../diagrams/pid_diagram.svg).
+*Visual Reference:* See the complete [P&ID Diagram](diagrams/pid_diagram.svg).
 
 ---
 

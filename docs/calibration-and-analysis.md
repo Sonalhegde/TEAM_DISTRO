@@ -50,7 +50,7 @@ Data collected using a calibrated $1000\text{ mL}$ Class-A graduated cylinder an
 - **Maximum Calibration Error:** $0.0083\text{ L/min}$ ($0.14\%\text{ Full Scale}$)
 - **Average Calibration Error:** $0.0045\text{ L/min}$ ($0.08\%\text{ Full Scale}$)
 
-![Sensor Calibration Curve](../assets/sensor_calibration_curve.png)
+![Sensor Calibration Curve](figures/sensor_calibration_curve.png)
 
 ---
 
@@ -65,7 +65,7 @@ To evaluate flow control authority, the manual ball valve (`BV-01`) was set to f
 | **70%** | **2.65 L/min** | 82.8% | Moderate restriction |
 | **100%** | **3.20 L/min** | 100.0% | Wide open; system piping resistance limits flow |
 
-![Valve Characteristic Curve](../assets/valve_characteristic_curve.png)
+![Valve Characteristic Curve](figures/valve_characteristic_curve.png)
 
 ---
 
@@ -73,7 +73,7 @@ To evaluate flow control authority, the manual ball valve (`BV-01`) was set to f
 
 In Case 1, continuous telemetry logging demonstrated both steady state target flow maintenance and instantaneous level fault mitigation:
 
-![Flow vs Time Trend](../assets/flow_vs_time_sample.png)
+![Flow vs Time Trend](figures/flow_vs_time_sample.png)
 
 - **0 to 10s:** Startup ramp to target $3.0\text{ L/min}$ ($50.0\text{ mL/s}$).
 - **10 to 45s:** Stable closed-loop recirculation.

@@ -11,7 +11,7 @@
 
 The control architecture is powered by an external **12 V DC Switched-Mode Power Supply (SMPS)**. The custom PCB interfaces the **ESP32 NodeMCU (U7)** with three 12V motor driver channels, one 12V solenoid valve interface, and digital/analog sensor inputs.
 
-![Electrical Schematic](../diagrams/electrical_schematic.svg)
+![Electrical Schematic](diagrams/electrical_schematic.svg)
 
 ---
 
