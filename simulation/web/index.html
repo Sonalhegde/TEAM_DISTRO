@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lam Challenge 3.0 – Liquid-Flow Rig Simulator</title>
+<title>Lam Research Challenge 3.0 – Liquid-Flow Rig 3D Simulator</title>
 <style>
 :root{--bg:#0e141b;--panel:#151d27;--panel2:#1b2531;--line:#2a3646;--tx:#e6edf7;--mut:#8fa0b6;--acc:#4da3ff;--ok:#36e06a;--warn:#ffb020;--bad:#ff5a5a;--r:10px}
 *{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-#app{display:grid;grid-template-columns:minmax(0,1fr) 480px;height:100vh}
+#app{display:grid;grid-template-columns:minmax(0,1fr) 460px;height:100vh}
 #view{position:relative;min-height:0}#view canvas{display:block;width:100%;height:100%}
 #hud{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;max-width:calc(100% - 24px)}
 .chip{background:rgba(21,29,39,.88);border:1px solid var(--line);border-radius:8px;padding:6px 10px;backdrop-filter:blur(4px)}
@@ -21,8 +21,8 @@
 #tabs{display:flex;flex-wrap:wrap;gap:2px;padding:8px 8px 0;border-bottom:1px solid var(--line)}
 .tab{background:none;border:0;color:var(--mut);padding:8px 10px;border-radius:8px 8px 0 0;cursor:pointer;font:inherit;font-weight:600}
 .tab.on{background:var(--panel2);color:var(--tx);box-shadow:inset 0 -2px var(--acc)}
-.pane{display:none;overflow:auto;padding:12px;min-height:0;flex:1}.pane.on{display:block}
-h3{margin:14px 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}h3:first-child{margin-top:0}
+.pane{display:none;overflow:auto;padding:14px;min-height:0;flex:1}.pane.on{display:block}
+h3{margin:16px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}h3:first-child{margin-top:0}
 button,select,input{font:inherit;color:var(--tx)}
 .btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 11px;cursor:pointer}.btn:hover{border-color:var(--acc)}
 .btn.pri{background:#1d4f8f;border-color:#2f78d0}.btn.go{background:#1a6a3a;border-color:#2fa860}.btn.stop{background:#7a2626;border-color:#c04444}.btn.sm{padding:4px 8px;font-size:12px}
@@ -33,15 +33,13 @@ button,select,input{font:inherit;color:var(--tx)}
 .card .k{color:var(--mut);font-size:12px}.card .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}.card .u{font-size:12px;color:var(--mut);font-weight:400}
 .led{display:inline-block;width:10px;height:10px;border-radius:50%;background:#333;margin-right:6px;vertical-align:middle}.led.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}.led.red.on{background:var(--bad);box-shadow:0 0 8px var(--bad)}.led.amb.on{background:var(--warn);box-shadow:0 0 8px var(--warn)}
 .bar{height:8px;background:#0c1218;border-radius:4px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--acc)}
-canvas.chart{width:100%;height:170px;background:#0f161e;border:1px solid var(--line);border-radius:var(--r);display:block}
-table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}th,td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}th{color:var(--mut);font-weight:600;font-size:12px}
-.pass{color:var(--ok);font-weight:700}.fail{color:var(--bad);font-weight:700}
-#log{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#0c1218;border:1px solid var(--line);border-radius:var(--r);padding:8px;max-height:150px;overflow:auto}
+canvas.chart{width:100%;height:150px;background:#0f161e;border:1px solid var(--line);border-radius:var(--r);display:block}
+#log{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;background:#0c1218;border:1px solid var(--line);border-radius:var(--r);padding:8px;max-height:140px;overflow:auto}
 label.f{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:13px}
 input[type=range]{accent-color:var(--acc)}input[type=number],select{background:#0c1218;border:1px solid var(--line);border-radius:6px;padding:4px 6px}
-.note{color:var(--mut);font-size:12px}.eq{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0c1218;padding:2px 6px;border-radius:4px}
-svg text{fill:#dce6f5;font:12px system-ui}svg .mut{fill:#8fa0b6}
-#app.wide{grid-template-columns:1fr}#app.wide #view{display:none}
+.note{color:var(--mut);font-size:12px}
+.box-desc{background:#111923;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0;line-height:1.5}
+.box-desc b{color:var(--acc)}
 @media(max-width:900px){#app{grid-template-columns:1fr;grid-template-rows:55vh 1fr;height:auto;min-height:100vh}#side{border-left:0;border-top:1px solid var(--line)}}
 </style>
 </head>
@@ -61,32 +59,26 @@ svg text{fill:#dce6f5;font:12px system-ui}svg .mut{fill:#8fa0b6}
   <div id="side">
     <div id="tabs"></div>
 
-    <!-- RUN -->
-    <div class="pane" id="p-run">
+    <!-- 3D RIG CONTROLS & FLOW -->
+    <div class="pane on" id="p-run">
       <div class="row">
         <button class="btn pri" id="bDemo">🎬 Guided demo (auto)</button>
         <button class="btn" id="bPause">⏸ Pause</button>
-        <button class="btn go" id="bStart">▶ Switch ON (start Case 1 → 2)</button>
+        <button class="btn go" id="bStart">▶ Switch ON</button>
         <button class="btn stop" id="bStop">■ Switch OFF</button>
-        <button class="btn" id="bReset">↺ Reset rig</button>
+        <button class="btn" id="bReset">↺ Reset</button>
       </div>
       <div class="row">
-        <button class="btn" id="bInject">💧 Inject external fluid (+1.5 L → sump)</button>
+        <button class="btn" id="bInject">💧 Inject fluid (+1.5 L → sump)</button>
         <button class="btn" id="bBV1">BV-01 flush valve: <b id="bv1s">closed</b></button>
       </div>
       <div class="row">
         <label class="f">Speed <select id="speed"><option>1</option><option>2</option><option selected>5</option><option>10</option><option>20</option></select>×</label>
-        <label class="f"><input type="checkbox" id="cLabels" checked> labels</label>
-        <label class="f"><input type="checkbox" id="cOp" checked> auto-operator opens BV-01 (3 s after prompt)</label>
-      </div>
-      <div class="row"><label class="f" style="flex:1">BV-02 throttle <input type="range" id="bv2" min="0" max="100" value="28.3" step="0.5" style="flex:1"> <b id="bv2v">28 %</b></label></div>
-      <div class="row">
-        <label class="f">Inject fault <select id="fault"><option value="none">none</option><option value="valve">valve restriction (B)</option><option value="blockage">hydraulic blockage (C)</option><option value="sensor">FT-01 sensor failure (C)</option><option value="pump">Pump-02 failure (C/D)</option><option value="air">air ingress / cavitation (E)</option></select></label>
-        <label class="f">Case-1 time <input type="number" id="c1t" value="60" min="10" max="600" style="width:64px"> s</label>
-        <label class="f">FT-01 coeffs <select id="coefSel"><option value="ds">datasheet (7.5 Hz per L/min)</option><option value="cal">calibrated (Task 2)</option></select></label>
+        <label class="f"><input type="checkbox" id="cLabels" checked> 3D labels</label>
+        <label class="f"><input type="checkbox" id="cOp" checked> Auto-operator opens BV-01</label>
       </div>
 
-      <h3>Live readings</h3>
+      <h3>Live telemetry</h3>
       <div class="grid3">
         <div class="card"><div class="k">Flow (FT-01)</div><div class="v"><span id="vQ">0.00</span> <span class="u">L/min</span></div><div class="u" id="vQs"></div></div>
         <div class="card"><div class="k">Pulse freq.</div><div class="v"><span id="vF">0.0</span> <span class="u">Hz</span></div><div class="u" id="vN"></div></div>
@@ -106,54 +98,45 @@ svg text{fill:#dce6f5;font:12px system-ui}svg .mut{fill:#8fa0b6}
         <div class="card">
           <div><span class="led" id="lOV"></span>OV-01 <b id="sOV">closed</b></div>
           <div><span class="led red" id="lFL"></span>Float switch <b id="sFL">low</b></div>
-          <div><span class="led amb" id="lFT"></span>Flush mixing: process <b id="sMix">100</b> %</div>
+          <div><span class="led amb" id="lFT"></span>Flush mixing <b id="sMix">100</b> %</div>
         </div>
       </div>
 
-      <h3>Flow vs time (L/min · mL/s)</h3><canvas class="chart" id="chFlow"></canvas>
-      <h3>Vessel levels (L)</h3><canvas class="chart" id="chLvl"></canvas>
+      <h3>Flow vs time</h3><canvas class="chart" id="chFlow"></canvas>
+      <h3>Tank volumes</h3><canvas class="chart" id="chLvl"></canvas>
       <div class="row"><button class="btn sm" id="bCsv">⬇ Export CSV</button><button class="btn sm" id="bShot">⬇ Screenshot (3D)</button></div>
       <h3>Controller event log</h3><div id="log"></div>
     </div>
 
-    <!-- P&ID -->
-    <div class="pane" id="p-pid"><h3>Task 1 · Q1.1 – P&amp;ID</h3><div id="pidBox"></div>
-      <p class="note">Tubing 10 mm OD / 8 mm ID. Case 1 path: T-01 → OV-01 → tee → P-01 → SMP-01 → P-02 → BV-02 → FT-01 → T-01. Case 2 adds F-01 → BV-01 → P-03 → tee (OV-01 closed).</p></div>
+    <!-- CASES EXPLANATION FLOW -->
+    <div class="pane" id="p-cases">
+      <h3>Case 1 · Closed-loop recirculation & level protection</h3>
+      <div class="box-desc">
+        <p><b>Recirculation Flow:</b> Process fluid leaves the 10 L tank (T-01) through the open solenoid valve (OV-01). Pump-01 runs at 50% PWM and feeds the 4.5 L sump tank. Pump-02 runs at 100% PWM, drawing fluid from the sump and returning it through the FT-01 turbine flow transmitter to T-01 at target <b>3.0 L/min (50 mL/s)</b>.</p>
+        <p><b>Sump Overflow Protection:</b> If external fluid enters the sump, the float switch (LS-01) detects high liquid level. Pump-01 stops immediately (0% PWM) while Pump-02 continues pumping at 100% PWM to drain the surcharge back to T-01. Once level clears, Pump-01 automatically restarts.</p>
+      </div>
 
-    <!-- CALIBRATION -->
-    <div class="pane" id="p-cal">
-      <h3>Q1.2 · 1, 3, 6 L/min: theory vs measured</h3>
-      <div class="row"><button class="btn pri" id="bQ12">Run bench at 1 / 3 / 6 L/min</button></div><div id="q12"></div>
-      <h3>Q2.1 · Ball-valve position vs flow</h3>
-      <div class="row"><button class="btn pri" id="bSweep">Run valve sweep 25 / 50 / 75 / 100 %</button></div>
-      <div id="sweepTbl"></div><canvas class="chart" id="chSweep"></canvas>
-      <h3>Q2.2 / Q2.3 · FT-01 calibration  <span class="eq">Q = a·f + b</span></h3>
-      <div class="row"><button class="btn pri" id="bCal">Run 5 calibration trials</button><button class="btn" id="bApply" disabled>Apply to controller</button></div>
-      <div id="calTbl"></div><canvas class="chart" id="chCal"></canvas><div id="calRep"></div>
+      <h3>Case 2 · Line flushing & automatic shutdown</h3>
+      <div class="box-desc">
+        <p><b>Process Isolation:</b> The solenoid valve OV-01 energizes closed to isolate the 10 L process tank.</p>
+        <p><b>Simultaneous 3-Pump Purge:</b> The operator opens manual ball valve BV-01. All three pumps (Pump-01, Pump-02, and Pump-03) run simultaneously to flush clean fluid through the entire piping network.</p>
+        <p><b>Automated Safe Shutdown:</b> When the 4.2 L flush volume is depleted and FT-01 senses zero flow, the controller stops all pumps and transitions safely to OFF.</p>
+      </div>
+
+      <h3>How to interact with the 3D model</h3>
+      <div class="box-desc">
+        <ul>
+          <li><b>Orbit camera:</b> Left-click and drag.</li>
+          <li><b>Pan camera:</b> Right-click or Shift + drag.</li>
+          <li><b>Zoom:</b> Mouse scroll wheel.</li>
+          <li><b>Interactive components:</b> Click the Master ON/OFF switch, BV-01 valve handle, or the external liquid container to inject fluid.</li>
+        </ul>
+      </div>
     </div>
-
-    <!-- THEORY -->
-    <div class="pane" id="p-theory">
-      <h3>Q3.1 · Hydraulic residence time</h3>
-      <div class="row"><label class="f">V <input type="number" id="thV" value="0.5" step="0.1" style="width:70px"> L</label><label class="f">Q <input type="number" id="thQ" value="2.5" step="0.1" style="width:70px"> L/min</label></div>
-      <div id="thRes"></div>
-      <h3>Q3.2 · Fault diagnosis (A–E)</h3>
-      <div id="faultTbl"></div>
-    </div>
-
-    <!-- TESTS -->
-    <div class="pane" id="p-test">
-      <div class="row"><button class="btn pri" id="bTests">Run all test cases</button><span id="tSum" class="note"></span></div>
-      <div id="tOut"></div>
-    </div>
-
-    <!-- SPEC -->
-    <div class="pane" id="p-spec"><div id="specOut"></div></div>
   </div>
 </div>
-<script src="three.min.js"></script>
+<script src="../vendor/three.min.js"></script>
 <script src="sim.js"></script>
-<script src="tests.js"></script>
 <script src="scene.js"></script>
 <script src="app.js"></script>
 </body>

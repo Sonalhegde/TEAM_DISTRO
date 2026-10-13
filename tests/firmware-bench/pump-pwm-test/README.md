@@ -1,12 +1,21 @@
-# Test Codes - Lam Research Challenge 3.0 (Stage 2)
+# Pump PWM Diagnostic Test
 
-This folder contains standalone diagnostic and hardware bring-up sketches for individual rig components.
+This directory contains the standalone hardware diagnostic sketch for testing the feed pump.
 
-## Available Tests
+## Target Hardware
 
-### 1. 	estcodeforpump (	estcodeforpump/testcodeforpump.ino)
-- **Target:** Feed Centrifugal Pump (Motor 1 / P-01) via BTS7960 H-Bridge driver.
-- **Microcontroller:** ESP32-WROOM-32 / ESP32-DevKitC (Arduino-ESP32 Core 3.x).
-- **Capability:** Full capacity 100% PWM duty cycle test.
-- **Duty Cycle Sequence:** 20s Full ON (PWM 255) -> 3s OFF (PWM 0) -> Loop.
-- **Verification Status:** Successfully tested on **2/10/2026**.
+- Target Component: Feed Pump (Pump-01)
+- Motor Driver: BTS7960 H-Bridge driver module
+- Microcontroller: ESP32-WROOM-32 / NodeMCU-32S
+- Sketch: [`testcodeforpump.ino`](testcodeforpump.ino)
+
+## Test Sequence
+
+1. The controller commands 100% PWM duty cycle (PWM value 255) for 20 s.
+2. The controller commands 0% PWM duty cycle (PWM value 0) for 3 s.
+3. The cycle repeats continuously.
+
+## Verification Status
+
+- Result: PASS.
+- Test Date: TO BE CONFIRMED (Date format to be confirmed by maintainer).

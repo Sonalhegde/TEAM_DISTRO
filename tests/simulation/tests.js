@@ -1,7 +1,7 @@
 /* Automated test cases derived from the Stage-2 question paper. Each returns {id,title,req,pass,detail} */
 (function (root) {
   'use strict';
-  const S = root.Sim || require('./sim.js');
+  const S = root.Sim || require('../../simulation/web/sim.js');
   const C = S.C;
   const fmt = (x, n) => Number(x).toFixed(n == null ? 2 : n);
 
