@@ -67,29 +67,22 @@ Detailed pin assignments are in [`docs/hardware-wiring-guide.md`](docs/hardware-
 
 ---
 
-## 4. Quick Start
+## 4. Quick Start: Build, Flash & Run Firmware (Espressif ESP-IDF)
 
-### 1. Run the 3D Digital Twin Simulation
-- **Live Online:** **[https://sonalhegde.github.io/TEAM_DISTRO/](https://sonalhegde.github.io/TEAM_DISTRO/)**
-- **Offline:** Open [`simulation/web/index.html`](simulation/web/index.html) in any modern web browser.
+The production controller firmware is written in native C++ using the Espressif ESP-IDF framework under [`controller_firmware/main/main.cpp`](controller_firmware/main/main.cpp).
 
-### 2. Run Automated Simulation Tests
-Run the headless Node.js verification test suite:
-```bash
-node tests/simulation/run-tests.js
-```
-All 16 test cases verify automatically.
+### 1. Build & Flash Controller Firmware
 
-### 3. Build & Flash Production Controller Firmware
-The controller firmware is located in [`controller_firmware/`](controller_firmware/).
-
-**1-Click Automated Batch Scripts (Windows):**
+#### Option A: 1-Click Automated Batch Scripts (Windows)
+From the repository root:
 ```cmd
 .\esp_build.bat
 .\esp_flash.bat
 ```
+- `esp_build.bat`: Sets Espressif toolchain paths and builds via `idf.py build`.
+- `esp_flash.bat`: Uses [`controller_firmware/tools/esp_quick.py`](controller_firmware/tools/esp_quick.py) to automatically scan COM ports, kill stale monitor locks, flash binaries, and launch serial output.
 
-**Using ESP-IDF Native CLI:**
+#### Option B: Native ESP-IDF CLI
 ```bash
 cd controller_firmware
 idf.py set-target esp32
@@ -97,22 +90,98 @@ idf.py build
 idf.py -p COM4 flash monitor
 ```
 
-### 4. Hardware Verification & Testing Procedure
-Follow the step-by-step testing manual:
-- **Testing Manual:** [`TESTING_PROCEDURE.md`](TESTING_PROCEDURE.md)
-- **Comprehensive Guide:** [`docs/COMPLETE_TESTING_PROCEDURE.md`](docs/COMPLETE_TESTING_PROCEDURE.md)
+---
 
-### 5. Run Telemetry & Serial Studio DAQ
-- **Serial Studio:** Open [`telemetry/serial_studio_project.json`](telemetry/serial_studio_project.json) in Serial Studio at `115200` baud.
-- **Python Logger:**
-  ```bash
-  pip install -r telemetry/requirements.txt
-  python telemetry/data_logger.py --port COM3
-  ```
+## 5. Serial CLI Command Reference & Process Control
+
+Open the serial connection at **115200 baud** (newline line endings) using any serial terminal or Serial Studio.
+
+### Process Execution Commands
+| Command | Shorthand | Action / Description |
+|---|---|---|
+| `auto` | `a`, `singlego` | **Single-Go Automated Challenge Run:** Executes Case 1 recirculation, handles sump surge if triggered, evacuates sump, and automatically advances to Case 2 flush. |
+| `case1` | `s1`, `c1`, `1` | **Start Case 1 Recirculation:** Solenoid OV-01 opens, Pump 1 runs at 50% duty, Pump 2 runs at 100% duty. |
+| `case2` | `s2`, `c2`, `2` | **Start Case 2 Flush:** Solenoid OV-01 closes (isolating 10 L tank), Pumps 1, 2, and 3 run concurrently until 4.2 L flush reservoir finishes or zero flow / air suction is detected. |
+| `case2 <sec>` | `c2 30` | **Timed Case 2 Flush:** Runs flush sequence for a designated number of seconds (e.g. `case2 45` for bench tests). |
+| `stop` | `0`, `x` | **Emergency Stop:** De-energizes all 3 pumps and closes solenoid valve immediately. |
+| `arm` | `unlock` | **Arm Master Safety Interlock:** Remotely enables execution of process commands. |
+| `disarm` | `lock` | **Disarm Master Safety Interlock:** Puts rig into safe stop; blocks process start. |
+| `status` | — | **System Snapshot:** Displays state, interlock mode, sump level, pulse counts, instantaneous flow rate, and cumulative totalizer. |
+| `rt` | — | **Reset Totalizer:** Sets cumulative transferred volume back to 0.000 L. |
+| `?` | — | **Help Menu:** Prints complete command reference to serial terminal. |
+
+### Calibration & Bench Diagnostics
+| Command | Parameters | Description |
+|---|---|---|
+| `calmode on` | — | Enters guarded calibration mode (push-button start disabled; automatic safety guards active). |
+| `calmode off` | — | Exits calibration mode and restores system to IDLE. |
+| `S` | — | **Start Calibration Run:** Starts pulse counting and timer for volumetric calibration point. |
+| `E` | — | **End Calibration Run:** Freezes timer and pulse count for calibration run. |
+| `V <vol>` | e.g. `V 1.00` | Records measured volume (litres) collected in graduated beaker during run. |
+| `FIT` / `CAL` | — | Computes least-squares linear regression ($Q = a \cdot f + b$) and prints trial error table. |
+| `APPLY` | — | Applies newly fitted slope $a$ and offset $b$ directly to active RAM calibration coefficients. |
+| `cal_a <val>` | e.g. `cal_a 0.009244` | Manually sets calibration slope $a$ (L/min per Hz). |
+| `cal_b <val>` | e.g. `cal_b 0.040111` | Manually sets calibration intercept offset $b$ (L/min). |
+| `DEMO` | — | Loads 5-point challenge verification dataset and calculates regression fit report. |
+| `C` / `CLEAR` | — | Clears all calibration run records and stored trials. |
+| `p1 <duty>` | `0.0 - 100.0` | Manually tests Pump 1 PWM duty (e.g. `p1 50`). |
+| `p2 <duty>` | `0.0 - 100.0` | Manually tests Pump 2 PWM duty (e.g. `p2 100`). |
+| `p3 <duty>` | `0.0 - 100.0` | Manually tests Pump 3 PWM duty (e.g. `p3 80`). |
+| `sov <1/0>` | `1` or `0` | Manually drives solenoid valve relay (`1` = Open, `0` = Closed). |
+| `sov inv` | — | Toggles solenoid relay driver output logic polarity. |
+| `prev` | — | Toggles Pump 1 forward / reverse H-bridge direction. |
 
 ---
 
-## 5. Repository Structure
+## 6. Serial Studio DAQ Telemetry Setup
+
+The ESP-IDF controller firmware outputs live telemetry frames every nominal 1.0 second formatted for real-time visualization in **Serial Studio**:
+
+```
+/*<time_s>,<pulses>,<window_s>,<freq_Hz>,<Q_Lmin>,<Q_mLs>,<total_L>,<total_pulses>,<run_pulses>,<run_time_s>,<run_freq_Hz>,<Q_actual_Lmin>,<error_pct>*/\r\n
+```
+
+### Setup Instructions
+1. **Download Serial Studio:** Install the application from [Serial Studio Releases](https://github.com/Serial-Studio/Serial-Studio/releases).
+2. **Open Project Configuration:**
+   - In Serial Studio, click **Project** -> **Open Project** (`Ctrl+O`).
+   - Select [`telemetry/serial_studio_project.json`](telemetry/serial_studio_project.json).
+3. **Configure Connection:**
+   - Set **Transport Type** to **Serial Port**.
+   - Select your ESP32 COM port (e.g. `COM3` or `COM4`).
+   - Set **Baud Rate** to `115200`, **Data Bits** `8`, **Parity** `None`, **Stop Bits** `1`.
+4. **Connect & Visualize:**
+   - Click **Connect** in the top toolbar.
+   - Switch to **Dashboard** to view live dials, flow rate time-series plots, volume bars, and sump alarms.
+   - Switch to **Console** to send CLI commands (`auto`, `case1`, `case2`, `stop`, `FIT`, `APPLY`).
+
+---
+
+## 7. Python Telemetry Logger & Verification Tests
+
+### 1. Run 3D Digital Twin Simulation
+- **Live Online:** **[https://sonalhegde.github.io/TEAM_DISTRO/](https://sonalhegde.github.io/TEAM_DISTRO/)**
+- **Offline:** Open [`simulation/web/index.html`](simulation/web/index.html) in any web browser.
+
+### 2. Run Automated Simulation Tests
+```bash
+node tests/simulation/run-tests.js
+```
+All 16 test cases verify automatically.
+
+### 3. Run Python Data Logger
+```bash
+pip install -r telemetry/requirements.txt
+python telemetry/data_logger.py --port COM3
+```
+
+### 4. Hardware Verification & Testing Manual
+- **Testing Procedure:** [`TESTING_PROCEDURE.md`](TESTING_PROCEDURE.md)
+- **Detailed Rig Manual:** [`docs/COMPLETE_TESTING_PROCEDURE.md`](docs/COMPLETE_TESTING_PROCEDURE.md)
+
+---
+
+## 8. Repository Structure
 
 ```
 TEAM_DISTRO/
@@ -153,7 +222,7 @@ TEAM_DISTRO/
 ├── hardware/
 │   └── 3d-print/                 # 3D printable CAD models and specifications
 │       ├── README.md             # Component index and slicer settings
-│       ├── stl/                  # Individual STL files
+│       ├── stl/              # Individual STL files
 │       └── images/               # CAD blueprints and 3D visual renders
 ├── simulation/                   # 3D digital twin package
 │   ├── README.md                 # Simulation architecture and user guide
@@ -175,6 +244,6 @@ TEAM_DISTRO/
 
 ---
 
-## 6. License
+## 9. License
 
 Refer to [`LICENSE`](LICENSE) for licensing terms.
