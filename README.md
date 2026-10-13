@@ -42,9 +42,9 @@ Design, build, commission, and validate an automated small-scale fluid handling 
 | Name | Role | Department | USN | Email | GitHub | Contribution |
 |---|---|---|---|---|---|---|
 | **Sonal Hegde** | Team Leader | Department of ECE | NNM24AC050 | nnm24ac050@nmamit.in | [@Sonalhegde](https://github.com/Sonalhegde) | Coding and Documentation |
+| **Pratham Amin** | Member | Department of Mechanical Engineering | NNM24ME084 | nnm24me084@nmamit.in | [@pratham885](https://github.com/pratham885) | Piping, 3D Printing, CAD, and Calibration |
 | **Jostan Saldanha** | Member | Department of ECE | NNM25AC502 | nnm25ac502@nmamit.in | [@jostan-saldanha](https://github.com/jostan-saldanha) | Electrical and Coding |
 | **Mohammed Araan** | Member | Department of CSE | NNM24CS142 | nnm24cs142@nmamit.in | [@Araan-Sheikh](https://github.com/Araan-Sheikh) | Video Editing and 3D Modelling |
-| **Pratham Amin** | Member | Department of Mechanical Engineering | NNM24ME084 | nnm24me084@nmamit.in | [@pratham885](https://github.com/pratham885) | Piping, 3D Printing, CAD, and Calibration |
 
 ---
 
