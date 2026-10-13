@@ -4,7 +4,7 @@
 
 ![Team ID](https://img.shields.io/badge/Team%20ID-LRC--26--0528-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Complete-success?style=for-the-badge)
-[![Live 3D Simulation](https://img.shields.io/badge/Simulation-3D%20Digital%20Twin-brightgreen?style=for-the-badge&logo=three.js)](https://sonalhegde.github.io/TEAM_DISTRO/)
+[![Live 3D Simulation](https://img.shields.io/badge/Live%20Simulation-3D%20Digital%20Twin-brightgreen?style=for-the-badge&logo=three.js)](https://sonalhegde.github.io/TEAM_DISTRO/)
 ![Controller](https://img.shields.io/badge/Controller-ESP32%20NodeMCU-red?style=for-the-badge&logo=espressif)
 ![Firmware](https://img.shields.io/badge/Firmware-C%2B%2B%20%2F%20Arduino-teal?style=for-the-badge&logo=arduino)
 ![Python DAQ](https://img.shields.io/badge/DAQ-Python%203.13-yellow?style=for-the-badge&logo=python)
@@ -12,18 +12,16 @@
 ### **Team DISTRO**
 **Industrial Manufacturing Process Automations: Liquid-Handling and Recirculation Rig**
 
-👉 **[Launch Live 3D Digital Twin Simulation](https://sonalhegde.github.io/TEAM_DISTRO/)** 👈
+👉 **[Launch Live 3D Digital Twin Simulation (Click Here)](https://sonalhegde.github.io/TEAM_DISTRO/)** 👈
 
 </div>
 
 ---
 
-## 1. Project Overview
+## 1. Problem Statement
 
-This repository contains the complete firmware, electrical schematics, 3D printing models, telemetry tools, and digital twin simulation for an automated liquid-handling platform. The system models semiconductor chemical dispense and Ultrapure Water (UPW) distribution systems.
-
-### Primary Automation Cases
-1. **Case 1 (Closed-Loop Recirculation and Overflow Protection):**
+Design, build, commission, and validate an automated small-scale fluid handling platform capable of:
+1. **Case 1 (Closed-Loop Recirculation and Level Protection):**
    - Recirculates fluid continuously at a target flow rate of 3.0 L/min (50 mL/s).
    - Monitors sump level with a float switch (`LS-01`).
    - If external fluid enters the sump, the controller stops Pump-01 immediately. Pump-02 continues pumping at 100% duty cycle to return the excess liquid to the main 10 L tank.
@@ -35,7 +33,22 @@ This repository contains the complete firmware, electrical schematics, 3D printi
 
 ---
 
-## 2. Hardware and Sensor Components
+## 2. Team Members and Project Contributions
+
+- **Institution:** Nitte (Deemed to be University) - NMAM Institute of Technology
+- **Team Identifier:** LRC-26-0528
+- **Team Name:** Team DISTRO
+
+| Name | Role | Department | USN | Email | GitHub | Contribution |
+|---|---|---|---|---|---|---|
+| **Sonal Hegde** | Team Leader | Department of ECE | NNM24AC050 | nnm24ac050@nmamit.in | [@Sonalhegde](https://github.com/Sonalhegde) | Coding and Documentation |
+| **Jostan Saldanha** | Member | Department of ECE | NNM25AC502 | nnm25ac502@nmamit.in | [@jostan-saldanha](https://github.com/jostan-saldanha) | Electrical and Coding |
+| **Mohammed Araan** | Member | Department of CSE | NNM24CS142 | nnm24cs142@nmamit.in | [@Araan-Sheikh](https://github.com/Araan-Sheikh) | Video Editing and 3D Modelling |
+| **Pratham Amin** | Member | Department of Mechanical Engineering | NNM24ME084 | nnm24me084@nmamit.in | TO BE CONFIRMED | Piping, 3D Printing, CAD, and Calibration |
+
+---
+
+## 3. Hardware and Sensor Components
 
 | Tag | Component | Function | Interface / GPIO |
 |---|---|---|:---:|
@@ -54,11 +67,11 @@ Detailed pin assignments are in [`docs/hardware-wiring-guide.md`](docs/hardware-
 
 ---
 
-## 3. Quick Start
+## 4. Quick Start
 
 ### Run the 3D Digital Twin Simulation
-- Open [`simulation/web/index.html`](simulation/web/index.html) in any modern browser for offline operation.
-- Or visit the live GitHub Pages site: **[https://sonalhegde.github.io/TEAM_DISTRO/](https://sonalhegde.github.io/TEAM_DISTRO/)**
+- **Live Online:** **[https://sonalhegde.github.io/TEAM_DISTRO/](https://sonalhegde.github.io/TEAM_DISTRO/)**
+- **Offline:** Open [`simulation/web/index.html`](simulation/web/index.html) in any modern web browser.
 
 ### Run Automated Simulation Tests
 Run the headless Node.js verification test suite:
@@ -79,12 +92,15 @@ python telemetry/data_logger.py --port COM3
 
 ---
 
-## 4. Repository Structure
+## 5. Repository Structure
 
 ```
 TEAM_DISTRO/
-├── README.md                 # Project overview, quick start, team, links
-├── TEAM.md                   # Team members and roles
+├── .github/
+│   └── workflows/
+│       └── pages.yml         # GitHub Pages automated deployment workflow
+├── README.md                 # Project overview, problem statement, team, links
+├── TEAM.md                   # Team members, roles, departments, contributions
 ├── CONTRIBUTING.md           # Branch, commit, and review rules
 ├── CHANGELOG.md              # Version history
 ├── LICENSE                   # Software license terms
@@ -125,21 +141,6 @@ TEAM_DISTRO/
     ├── requirements.txt      # Python dependencies
     └── serial_studio_project.json # Serial Studio dashboard profile
 ```
-
----
-
-## 5. Team Details
-
-- **Institution:** Nitte (Deemed to be University) - NMAM Institute of Technology
-- **Team Identifier:** LRC-26-0528
-- **Team Name:** Team DISTRO
-
-| Name | Role | Department | USN | Email | GitHub | Contribution |
-|---|---|---|---|---|---|---|
-| **Sonal Hegde** | Team Leader | TO BE CONFIRMED | NNM24AC050 | nnm24ac050@nmamit.in | [@Sonalhegde](https://github.com/Sonalhegde) | TO BE CONFIRMED |
-| **Jostan Saldanha** | Member | Department of ECE | NNM25AC502 | nnm25ac502@nmamit.in | [@jostan-saldanha](https://github.com/jostan-saldanha) | TO BE CONFIRMED |
-| **Mohammed Araan** | Member | Department of CSE | NNM24CS142 | nnm24cs142@nmamit.in | [@Araan-Sheikh](https://github.com/Araan-Sheikh) | TO BE CONFIRMED |
-| **Pratham Amin** | Member | Department of Mechanical Engineering | NNM24ME084 | nnm24me084@nmamit.in | TO BE CONFIRMED | TO BE CONFIRMED |
 
 ---
 
