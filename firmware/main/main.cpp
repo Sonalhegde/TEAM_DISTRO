@@ -1,26 +1,13 @@
-
-/**
- * ============================================================================
- * Lam Research Challenge 3.0 - Stage 2: Practical Engineering Challenge
- * Team Name: TEAM DISTRO | Team ID: LRC-26-0528
+/*
+ * ESP32 process controller for Lam Research Challenge 3.0 Stage 2 (LRC-26-0528).
+ * Target: NodeMCU-32S / DevKitC on LAM Stage 2 PCB Rev 1.0.
  *
- * OFFICIAL VERIFIED CONTROLLER & SERIAL STUDIO DAQ FIRMWARE
- * PCB: "LAM Stage 2 PCB Rev 1.0" (T-Works Foundation, Drawn by Syed Tajammul Hassan)
- * Microcontroller: ESP32 (NodeMCU-32S / ESP32-DevKitC)
- *
- * Fully Verified Against Official Challenge Specification:
- *  - CASE 1: Closed-loop Recirculation & Sump Level Surge Mitigation
- *            Pump-01 @ 50% duty, Pump-02 @ 100% duty, Solenoid OV-01 OPEN.
- *            Level Interlock: Float HIGH -> Pump-01 STOPS, Pump-02 DRAINS @ 100%.
- *            Level Normal: Pump-01 auto-restarts @ 50%.
- *  - CASE 2: Multi-Pump Line Flushing & Safe Auto-Shutdown
- *            Solenoid OV-01 CLOSED (10L Process Reservoir ISOLATED).
- *            All 3 Pumps (P1, P2, P3) run simultaneously.
- *            Auto-shutdown when 4.2L flush volume is exhausted.
- *  - SINGLE-GO AUTOMATED SEQUENCE: Case 1 -> Case 2 continuous execution.
- *  - SERIAL STUDIO TELEMETRY: Real-time DAQ frame (format: / * ... * / containing time,state,freq,flow,mls,total,fsw)
- *  - BUILT-IN PUSH BUTTON LED: Process & alarm illumination driver.
- * ============================================================================
+ * Case 1: Closed-loop recirculation at 3.0 L/min target (P1 at 50%, P2 at 100%).
+ *         Sump high level stops P1 while P2 drains excess to the 10 L reservoir.
+ *         P1 automatically restarts when the sump level drops below the float switch.
+ * Case 2: Flush sequence with the 10 L reservoir isolated by closing solenoid OV-01.
+ *         P1, P2, and P3 run concurrently from the 4.2 L flush reservoir.
+ *         Automatic shutdown triggers when fluid depletes and flow collapses.
  */
 
 #include <Arduino.h>
@@ -32,22 +19,15 @@
 #define ESP_ARDUINO_VERSION_MAJOR 2
 #endif
 
-// ======================= PHYSICAL PINOUT (LAM STAGE 2 PCB REV 1.0) =======================
-// Strict alignment with official schematic drawn by Syed Tajammul Hassan (T-Works Foundation):
-//  - SW (Pin 5): GPIO 34 (ON/OFF Switch with 10k R2 pull-up to 3V3 & 100nF C5)
-//  - FSW (Pin 6): GPIO 35 (Sump Float Switch with 10k R10 pull-up to 3V3 & 100nF C9)
-//  - FS (Pin 12): GPIO 14 (Flow Sensor FT-01 Primary connected to JST XH 3-Pin Pin 1)
-//  - SV (Pin 11): GPIO 27 (Solenoid Valve OV-01 Primary connected to JST XH 3-Pin Pin 2)
-static const int PIN_SW         = 34;  // ON/OFF Tactile Switch (GPIO 34, Pin 5 on U7)
-static const int PIN_FSW        = 35;  // Sump Float Switch (GPIO 35, Pin 6 on U7, 10k R10 pullup)
-static const int PIN_FS         = 14;  // Flow Sensor FT-01 Primary (GPIO 14, Pin 12 on U7 labeled FS)
-static const int PIN_SV         = 27;  // Solenoid Valve Driver OV-01 Primary (GPIO 27, Pin 11 on U7)
+// Pin assignments matching schematic LAM Stage 2 PCB Rev 1.0.
+// Digital inputs use external 10 kOhm pull-up resistors to 3.3 V with 100 nF debounce capacitors.
+static const int PIN_SW         = 34;
+static const int PIN_FSW        = 35;
+static const int PIN_FS         = 14;
+static const int PIN_SV         = 27;
 
-// BTS7960 Motor Driver Connectors (U2, U3, U4)
-// Schematic:
-//  - U2 (Pump 1): L_EN1=GPIO 13 (Pin 15 on U7), R_EN1=26 (Pin 10), L_PWM1=32 (Pin 7), R_PWM1=33 (Pin 8)
-//  - U3 (Pump 2): L_EN2=16 (Pin 27), R_EN2=17 (Pin 28), L_PWM2=18 (Pin 30), R_PWM2=19 (Pin 31)
-//  - U4 (Pump 3): L_EN3=21 (Pin 33), R_EN3=22 (Pin 36), L_PWM3=23 (Pin 37), R_PWM3=25 (Pin 9)
+// BTS7960 high-power half-bridge motor driver connections.
+// Each driver requires independent left/right enable and PWM control pins.
 struct PumpPins {
     uint8_t lEn;
     uint8_t rEn;
@@ -55,81 +35,91 @@ struct PumpPins {
     uint8_t rPwm;
 };
 
+// Motor driver pin assignments: U2 (Pump-01 feed), U3 (Pump-02 return), U4 (Pump-03 flush).
 static const PumpPins PUMP[3] = {
-    {13, 26, 32, 33},  // Pump 1 (U2): L_EN1=GPIO 13 (Pin 15 on U7), R_EN1=26, L_PWM1=32, R_PWM1=33
-    {16, 17, 18, 19},  // Pump 2 (U3): L_EN2=16, R_EN2=17, L_PWM2=18, R_PWM2=19
-    {21, 22, 23, 25}   // Pump 3 (U4): L_EN3=21, R_EN3=22, L_PWM3=23, R_PWM3=25
+    {13, 26, 32, 33},
+    {16, 17, 18, 19},
+    {21, 22, 23, 25}
 };
 
-// ======================= OPERATING PARAMETERS (PER CHALLENGE PDF) =======================
-// Switch & Startup Configuration
-static const bool     USE_PHYSICAL_SWITCH  = true;    // true = push-button acts as Master Start / Safe Stop
-static const bool     AUTO_START_ON_BOOT   = false;   // false = waits on standby for button press or serial command
+// Hardware startup and operating parameters.
+// Tactile switch provides manual start and safe stop functionality.
+static const bool     USE_PHYSICAL_SWITCH  = true;
+static const bool     AUTO_START_ON_BOOT   = false;
 
-static const uint32_t PWM_FREQ             = 5000;    // 5 kHz PWM (reliable for BTS7960 optocoupler inputs)
-static const uint8_t  PWM_BITS             = 8;       // 8-bit resolution (0 - 255)
-static bool           PUMP_REVERSE         = false;   // Swap direction in software (toggles GPIO 32 vs 33)
-static const bool     FLOAT_CLOSED_IS_HIGH = true;    // Float switch closed (pin LOW) = Sump level HIGH
+// 5 kHz PWM frequency operates reliably through the optocoupler isolators on the BTS7960 boards.
+static const uint32_t PWM_FREQ             = 5000;
+static const uint8_t  PWM_BITS             = 8;
+static bool           PUMP_REVERSE         = false;
+static const bool     FLOAT_CLOSED_IS_HIGH = true;
 
-// Case 1 Operating Duties (PDF Page 3: "Pump-01 runs on 50% duty, Pump-02 runs on 100% duty")
-static const float    PUMP1_C1_DUTY        = 50.0f;   // 50% Duty Cycle
-static const float    PUMP2_C1_DUTY        = 100.0f;  // 100% Duty Cycle
+// Operating duty cycles for Case 1 recirculation: Pump-01 at 50% duty, Pump-02 at 100% duty.
+static const float    PUMP1_C1_DUTY        = 50.0f;
+static const float    PUMP2_C1_DUTY        = 100.0f;
 
-// Case 2 Flush Operating Duties (PDF Page 3: "all three pumps operate simultaneously")
-static const float    PUMP1_C2_DUTY        = 50.0f;   // 50% Duty Cycle
-static const float    PUMP2_C2_DUTY        = 100.0f;  // 100% Duty Cycle
-static const float    PUMP3_C2_DUTY        = 100.0f;  // 100% Flush Delivery (paper gives no Case 2 duty; team choice)
+// Case 2 flush line conditioning: all three pumps operate concurrently.
+static const float    PUMP1_C2_DUTY        = 50.0f;
+static const float    PUMP2_C2_DUTY        = 100.0f;
+static const float    PUMP3_C2_DUTY        = 100.0f;
 
-// Flow Sensor Calibration: Q_Lmin = CAL_A * freq_Hz + CAL_B (fitted constants below; factory YF-S401 datasheet was F = 98*Q - 3)
-static float          ppl                  = 5880.0f;   // 98 Hz * 60 s = 5880 pulses/L
-static const float    FLOW_CUTOFF_HZ       = 1.0f;      // Noise gate: ignore rotor vibrations < 1 Hz
-static const float    FLOW_MIN_VALID       = 0.50f;     // Lower physical flow boundary (L/min) - tuned above 0.285 offset for clean dry detection
-static const float    C2_FLOW_COLLAPSE_LPM = 0.35f;     // Air ingestion collapse threshold (L/min): true air collapse drops near 0 L/min (< 0.35 L/min)
-static const float    FLUSH_CEILING_L      = 4.15f;     // PDF Spec: Stop as soon as 4.2L flush tank finishes (4.15L accounts for line hold-up)
-static const uint32_t C2_STARTUP_GRACE_MS  = 10000;    // 10s startup grace window: prevents ramp-up transients from tripping air-suction
-static const float    C2_MIN_FLUSH_ARM_L   = 0.30f;     // Minimum 300 mL delivered before air suction cutoff is armed
+// Nominal pulses per litre rating for the YF-S401 micro-turbine (98 Hz at 1 L/min).
+// NOTE: Factory rating is 5880 pulses/L (98 Hz/(L/min) * 60 s), but active flow calculation uses linear model CAL_A and CAL_B.
+static float          ppl                  = 5880.0f;
+// Noise gate threshold: pulse frequencies below 1.0 Hz are suppressed to prevent zero-flow creep.
+static const float    FLOW_CUTOFF_HZ       = 1.0f;
+// Minimum fluid velocity corresponding to 0.50 L/min to verify positive flow.
+static const float    FLOW_MIN_VALID       = 0.50f;
+// Flow collapse threshold: values below 0.35 L/min indicate cavitation and air entrainment.
+static const float    C2_FLOW_COLLAPSE_LPM = 0.35f;
+// Volumetric safety ceiling for the 4.2 L flush reservoir accounting for line holdup.
+static const float    FLUSH_CEILING_L      = 4.15f;
+// 10 s startup grace period to prevent initial hydraulic transients from triggering shutdown.
+static const uint32_t C2_STARTUP_GRACE_MS  = 10000;
+// Minimum 0.30 L delivered before the depletion collapse detector arms.
+static const float    C2_MIN_FLUSH_ARM_L   = 0.30f;
 
-// Timing Intervals
-static const uint32_t C1_GRACE_MS          = 4000;    // Startup grace period before dry-run protection
-static const uint32_t C1_NOFLOW_FAULT_MS   = 6000;    // No-flow trip threshold (dry run / blockage)
-static const uint32_t C2_PRIME_MS          = 25000;   // 25s flush line priming window (allows water to fill dry pipes to FT-01)
-static const uint32_t C2_EXHAUST_MS        = 1000;    // Fast 1.0s zero-flow / air-suction persistence
-static const uint32_t C1_RECOVERY_DWELL_MS = 20000;   // After surge recovery: keep normal Case 1 recirculation for 20s, then transition directly to Case 2 flush
-static const uint32_t C1_DRAIN_EMPTY_MS    = 3000;    // Drain phase: flow below FLOW_MIN_VALID for this long => sump is empty
-static const uint32_t C1_DRAIN_MAX_MS      = 45000;   // Drain safety timeout: 45s allows full 1.5-2.0L sump evacuation before advancing to Case 2
-static const uint32_t SURGE_CLEAR_CONFIRM_MS = 3000;  // Float must stay clear this long before Pump-01 restarts (anti short-cycling)
-// Case 2 Flush Shutdown Timer: Set to 1 min 30 s (90 s)
-// for all three pumps (P1=50%, P2=100%, P3=100%) to completely evacuate the 4.2 L flush tank.
+// Operational timing limits and safety timeouts.
+static const uint32_t C1_GRACE_MS          = 4000;
+static const uint32_t C1_NOFLOW_FAULT_MS   = 6000;
+static const uint32_t C2_PRIME_MS          = 25000;
+static const uint32_t C2_EXHAUST_MS        = 1000;
+static const uint32_t C1_RECOVERY_DWELL_MS = 20000;
+static const uint32_t C1_DRAIN_EMPTY_MS    = 3000;
+static const uint32_t C1_DRAIN_MAX_MS      = 45000;
+// Sump float switch must stay open for 3000 ms before Pump-01 restarts to prevent short-cycling.
+static const uint32_t SURGE_CLEAR_CONFIRM_MS = 3000;
+// Automatic Case 2 flush duration ceiling: 90 s evacuates the 4.2 L flush reservoir.
 static const uint32_t C2_AUTO_MAX_RUN_MS   = 90000;
 
-// Calibration mode guards ('calmode on' / 'calmode off')
-static const uint32_t CALMODE_IDLE_TIMEOUT_MS = 120000; // No command for 2 min -> pumps off, leave calibration mode
-static const uint32_t CALMODE_NOFLOW_STOP_MS  = 5000;   // Pump-2 running with ~zero flow this long -> Pump-2 off (dry sump / hose pulled)
-static const float    CALMODE_NOFLOW_LPM      = 0.20f;  // Flow below this counts as 'no flow' in calibration mode
-static const uint32_t C2_MAX_RUN_MS        = 600000;  // 10-minute global safety cutoff
-static const uint32_t SOV_CLOSE_DELAY_MS   = 500;     // Staggered valve shutdown (anti-water-hammer)
-static const uint32_t SOV_PRE_OPEN_MS      = 200;     // Lead-time: Open solenoid 200ms before pumps to prime suction line
-static bool           SOV_ACTIVE_HIGH      = false;   // false = Active-LOW relay module (typical 5V opto module: relay ON when input pulled LOW); true = Active-HIGH
-static const bool     SOV_HIGH_BY_FLOAT    = true;    // true = a logical HIGH is produced by FLOATING the pin (module's own 5V pull-up lifts it). A 3.3V GPIO cannot fully release a 5V-pulled input.
+// Calibration mode guards and idle timeouts.
+static const uint32_t CALMODE_IDLE_TIMEOUT_MS = 120000;
+static const uint32_t CALMODE_NOFLOW_STOP_MS  = 5000;
+static const float    CALMODE_NOFLOW_LPM      = 0.20f;
+static const uint32_t C2_MAX_RUN_MS        = 600000;
+// Solenoid valve closes 500 ms after pumps stop to eliminate water-hammer pressure spikes.
+static const uint32_t SOV_CLOSE_DELAY_MS   = 500;
+// Solenoid valve opens 200 ms prior to pump energization to pre-flood the suction line.
+static const uint32_t SOV_PRE_OPEN_MS      = 200;
+static bool           SOV_ACTIVE_HIGH      = false;
+// Floating the GPIO pin allows the relay module on-board 5 V pull-up to fully release the coil.
+static const bool     SOV_HIGH_BY_FLOAT    = true;
 
-static const uint32_t DEBOUNCE_MS          = 30;      // Tactile button debounce
-static const uint32_t LONG_PRESS_MS        = 1500;    // Short vs long press threshold
-static const uint32_t FLOAT_DEBOUNCE_MS    = 250;     // Float switch debounce filter
+// Mechanical switch debounce and long-press emergency stop thresholds.
+static const uint32_t DEBOUNCE_MS          = 30;
+static const uint32_t LONG_PRESS_MS        = 1500;
+static const uint32_t FLOAT_DEBOUNCE_MS    = 250;
 
-// ======================= SPECIFICATION CALIBRATION & TELEMETRY STATE =======================
-// Calibration model: Q_Lmin = max(CAL_A * freq_Hz + CAL_B, 0)
-// Empirically calibrated on physical test rig for YF-S401 (6 trials, 0.775-2.040 L/min, least-squares fit via 'FIT'):
-// R^2 = 0.99668, Avg Error = 1.62%, Max Error = 3.66%. Independent validation trial at 1.110 L/min: error 1.06%.
-// Earlier preliminary calibration (superseded): CAL_A = 0.007692, CAL_B = 0.284842.
-// 'APPLY' only updates these in RAM; edit the two constants below to keep a fit across reboots.
+// Empirical calibration coefficients derived from physical catch-and-weigh trials (0.775 to 2.040 L/min).
+// Linear model: Q = CAL_A * f + CAL_B with Q in L/min and f in Hz. R^2 = 0.99668.
+// NOTE: Comment historically referred to 0.285 L/min offset, but active CAL_B is 0.040111 L/min.
 static double         CAL_A                = 0.009244;
 static double         CAL_B                = 0.040111;
 
-// Window timing (default 1.0 s nominal window)
+// Telemetry sample window duration in seconds.
 static double         windowNominalSec     = 1.0;
 static int64_t        tPrevUs              = 0;
 
-// Double precision live telemetry fields (computed once per window)
+// Telemetry integration variables updated once per sample window.
 static double         time_s               = 0.0;
 static int64_t        cnt_prev             = 0;
 static double         window_s             = 1.0;
@@ -139,16 +129,16 @@ static double         Q_mLs                = 0.0;
 static double         total_L              = 0.0;
 static uint64_t       total_pulses         = 0;
 
-// ESP32 PCNT (Pulse Counter) Hardware State
+// ESP32 hardware pulse counter (PCNT) handle and accumulator state.
 static pcnt_unit_handle_t    pcntUnit      = NULL;
 static pcnt_channel_handle_t pcntChan      = NULL;
 static int                   lastRawPcnt   = 0;
 static int64_t               totalPcntAccum= 0;
 static const int             PCNT_LOW_LIMIT  = -32768;
 static const int             PCNT_HIGH_LIMIT = 32767;
-static int64_t               lastWindowN   = 0;   // Pulses counted in the most recent telemetry window
+static int64_t               lastWindowN   = 0;
 
-// Calibration Run State & Fields (Between 'S' and 'E')
+// Calibration run tracking fields between 'S' and 'E' commands.
 static bool           calRunActive         = false;
 static bool           calRunEnded          = false;
 static bool           calHoldingResult     = false;
@@ -163,7 +153,7 @@ static double         Q_actual_Lmin        = 0.0;
 static double         error_pct            = 0.0;
 static double         V_collected          = 0.0;
 
-// On-demand Regression Fit & Trial History
+// Stored calibration trials for on-demand linear regression solver.
 struct CalTrial {
     int trialId;
     uint64_t pulses;
@@ -185,33 +175,33 @@ static double         fit_max_err          = 0.0;
 static double         fit_avg_err          = 0.0;
 static bool           fit_valid            = false;
 
-// ======================= FINITE STATE MACHINE (FSM) =======================
+// Controller finite state machine operating states.
 enum SystemState {
-    ST_IDLE             = 0,  // Standby: All pumps OFF, Solenoid CLOSED
-    ST_CASE1_NORMAL     = 1,  // Case 1 Normal: SOV OPEN, P1 @ 50%, P2 @ 100%
-    ST_CASE1_SURGE      = 2,  // Case 1 Surge: Sump HIGH -> P1 STOPPED (0%), P2 @ 100%
-    ST_CASE2_FLUSHING   = 3,  // Case 2 Flush: SOV CLOSED (10L Isolated), P1, P2, P3 ALL ON
-    ST_CASE2_STOPPING   = 4,  // Case 2 Staged Stop: Pumps OFF, awaiting anti-hammer SOV closure
-    ST_FAULT            = 5,  // System Tripped: Dry running, pipe blockage, or timeout
-    ST_CASE1_DRAIN      = 6,  // Post-surge: SOV CLOSED, P1 OFF, P2 @ 100% drains sump completely before Case 2
-    ST_CALMODE          = 7   // Bench calibration mode: manual pump/valve control, button start disabled, guarded
+    ST_IDLE             = 0,
+    ST_CASE1_NORMAL     = 1,
+    ST_CASE1_SURGE      = 2,
+    ST_CASE2_FLUSHING   = 3,
+    ST_CASE2_STOPPING   = 4,
+    ST_FAULT            = 5,
+    ST_CASE1_DRAIN      = 6,
+    ST_CALMODE          = 7
 };
 
 static SystemState state = ST_IDLE;
-static bool singleGoMode = false;        // When true, runs Case 1 then auto-transitions to Case 2
-static bool surgeDemonstrated = false;   // Flag indicating sump level surge has been mitigated
-static uint32_t surgeClearMs = 0;        // Timestamp when surge condition cleared
-static uint32_t surgeFloatClearMs = 0;   // Timestamp when float first read clear during a surge (0 = still high)
-static bool masterInterlockArmed = false; // Master Safety Interlock (true = armed/running, false = safe locked)
-static bool flushFlowConfirmed = false;   // True once flush fluid is actively verified flowing through FT-01
-static uint32_t c2CustomDurationMs = 0;   // Optional timed duration in ms for bench testing (0 = autonomous PS mode)
-static uint8_t  c2LowFlowSamples   = 0;   // Counter for consecutive air-suction low flow samples
-static uint32_t lastC2PrintMs      = 0;   // Periodic console telemetry during Case 2
-static float    pumpDutyPct[3]     = {0.0f, 0.0f, 0.0f}; // Last commanded duty per pump (used by calibration-mode guards)
-static uint32_t calModeLastCmdMs   = 0;   // Time of last serial command (calibration-mode idle timeout)
-static uint32_t calModeNoFlowSinceMs = 0; // Pump-2 no-flow timer in calibration mode
+static bool singleGoMode = false;
+static bool surgeDemonstrated = false;
+static uint32_t surgeClearMs = 0;
+static uint32_t surgeFloatClearMs = 0;
+static bool masterInterlockArmed = false;
+static bool flushFlowConfirmed = false;
+static uint32_t c2CustomDurationMs = 0;
+static uint8_t  c2LowFlowSamples   = 0;
+static uint32_t lastC2PrintMs      = 0;
+static float    pumpDutyPct[3]     = {0.0f, 0.0f, 0.0f};
+static uint32_t calModeLastCmdMs   = 0;
+static uint32_t calModeNoFlowSinceMs = 0;
 
-// Legacy FSM variables kept for full backward compatibility
+// Process flow and level variables shared across control tasks.
 static volatile uint32_t pulseCount     = 0;
 static float    flowFreqHz              = 0.0f;
 static float    flowLpm                 = 0.0f;
@@ -229,24 +219,32 @@ static uint32_t lowFlowSinceMs          = 0;
 static uint32_t stopStartMs             = 0;
 static const char* faultMsg             = "";
 
-// ======================= HARDWARE INTERRUPT SERVICE ROUTINES =======================
+// Interrupt pulse counters placed in internal IRAM for deterministic low-latency execution.
 static volatile uint32_t pulseCount14   = 0;
 static volatile uint32_t pulseCount35   = 0;
 static volatile uint32_t pulseCount34   = 0;
 
+// Increments pulse counter on falling edge of GPIO 14 (FT-01 flow sensor).
+// Located in IRAM via IRAM_ATTR to avoid flash cache miss latency during flash writes.
 void IRAM_ATTR onFlowPulseISR14() {
     pulseCount14 = pulseCount14 + 1;
 }
 
+// Increments debug interrupt counter on GPIO 35 transitions.
+// Located in IRAM via IRAM_ATTR to prevent execution stalls.
+// NOTE: Function onFlowPulseISR35 attaches to float switch GPIO 35, not a flow sensor.
 void IRAM_ATTR onFlowPulseISR35() {
     pulseCount35 = pulseCount35 + 1;
 }
 
+// Increments debug interrupt counter on GPIO 34 transitions.
+// Located in IRAM via IRAM_ATTR to prevent execution stalls.
+// NOTE: Function onFlowPulseISR34 attaches to tactile switch GPIO 34, not a flow sensor.
 void IRAM_ATTR onFlowPulseISR34() {
     pulseCount34 = pulseCount34 + 1;
 }
 
-// ======================= ESP32 PCNT (PULSE COUNTER) DRIVER =======================
+// Configures the ESP32 pulse counter (PCNT) peripheral on GPIO 14 with a 1 us glitch filter.
 void initPCNT() {
     pcnt_unit_config_t unit_config = {};
     unit_config.low_limit = PCNT_LOW_LIMIT;
@@ -264,7 +262,7 @@ void initPCNT() {
         }
 
         pcnt_glitch_filter_config_t filter_config = {};
-        filter_config.max_glitch_ns = 1000; // 1 us glitch filter
+        filter_config.max_glitch_ns = 1000;
         pcnt_unit_set_glitch_filter(pcntUnit, &filter_config);
 
         pcnt_unit_enable(pcntUnit);
@@ -273,13 +271,14 @@ void initPCNT() {
     }
 }
 
+// Reads the hardware pulse count and handles counter overflow wrapping at 32768 pulses.
 int64_t getPcntCount() {
     if (pcntUnit != NULL) {
         int count = 0;
         pcnt_unit_get_count(pcntUnit, &count);
         int32_t diff = count - lastRawPcnt;
         if (diff < 0) {
-            diff += (PCNT_HIGH_LIMIT + 1); // Counter clears to 0 at the high limit -> true wrap length is 32768, not 65536
+            diff += (PCNT_HIGH_LIMIT + 1);
         }
         lastRawPcnt = count;
         totalPcntAccum += diff;
@@ -292,8 +291,7 @@ int64_t getPcntCount() {
     }
 }
 
-// ======================= PWM HARDWARE DRIVER =======================
-// Compatible with both Arduino-ESP32 Core 2.x (PlatformIO default) and Core 3.x (ESP-IDF native)
+// Configures PWM output compatibility across ESP-IDF Arduino component versions.
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
   #define PWM_ATTACH(pin, ch)   ledcAttach(pin, PWM_FREQ, PWM_BITS)
   #define PWM_WRITE(pin, ch, v) ledcWrite(pin, v)
@@ -302,6 +300,7 @@ int64_t getPcntCount() {
   #define PWM_WRITE(pin, ch, v) ledcWrite(ch, v)
 #endif
 
+// Sets PWM duty cycle (0.0 to 100.0%) for a designated pump driver.
 void setPump(uint8_t pumpIdx, float dutyPct) {
     if (pumpIdx >= 3) return;
     dutyPct = constrain(dutyPct, 0.0f, 100.0f);
@@ -311,82 +310,82 @@ void setPump(uint8_t pumpIdx, float dutyPct) {
     bool on = (v > 0);
 
     if (pumpIdx == 0) {
-        // Pump 1 (U2): Schematic has L_EN1 on GPIO 13 (U7 Pin 15) and R_EN1 on GPIO 26 (U7 Pin 10).
-        // We energize BOTH GPIO 13 and GPIO 12 HIGH to ensure enable regardless of board routing!
+        // NOTE: GPIO 12 and GPIO 13 are both driven for Pump 1 enable due to PCB routing divergence.
         digitalWrite(13, on ? HIGH : LOW);
         digitalWrite(12, on ? HIGH : LOW);
-        digitalWrite(PUMP[0].rEn, on ? HIGH : LOW); // GPIO 26
+        digitalWrite(PUMP[0].rEn, on ? HIGH : LOW);
 
-        // Forward PWM: L_PWM1 (GPIO 32). Reverse PWM: R_PWM1 (GPIO 33).
         uint8_t fwdPin = PUMP_REVERSE ? PUMP[0].rPwm : PUMP[0].lPwm;
         uint8_t revPin = PUMP_REVERSE ? PUMP[0].lPwm : PUMP[0].rPwm;
         PWM_WRITE(fwdPin, 0, on ? v : 0);
         PWM_WRITE(revPin, 1, 0);
     } else if (pumpIdx == 1) {
-        // Pump 2 (U3): L_EN2=GPIO 16, R_EN2=GPIO 17, L_PWM2=GPIO 18
         digitalWrite(PUMP[1].lEn, on ? HIGH : LOW);
         digitalWrite(PUMP[1].rEn, on ? HIGH : LOW);
         PWM_WRITE(PUMP[1].lPwm, 2, on ? v : 0);
     } else if (pumpIdx == 2) {
-        // Pump 3 (U4): L_EN3=GPIO 21, R_EN3=GPIO 22, L_PWM3=GPIO 23
         digitalWrite(PUMP[2].lEn, on ? HIGH : LOW);
         digitalWrite(PUMP[2].rEn, on ? HIGH : LOW);
         PWM_WRITE(PUMP[2].lPwm, 4, on ? v : 0);
     }
 }
 
+// Commands duty cycles for Pump 1, Pump 2, and Pump 3 simultaneously.
 void setAllPumps(float d1, float d2, float d3) {
     setPump(0, d1);
     setPump(1, d2);
     setPump(2, d3);
 }
 
+// Disables all three pump motor outputs.
 void pumpsOff() {
     setAllPumps(0.0f, 0.0f, 0.0f);
 }
 
-// Relay/solenoid line driver. energize=true -> relay ON (solenoid OPEN), false -> relay OFF (solenoid CLOSED).
-// Only LOW is ever actively driven; a HIGH level is made by releasing the pin (high-Z) so a 5V-powered relay module
-// sees its own pull-up (true 5V) and reliably de-energizes. Driving 3.3V into a 5V-pulled input leaves the relay stuck ON.
+// Drives the solenoid relay. Pulls pin LOW to energize; releases to high-Z to de-energize.
 static void sovDrive(bool energize) {
     bool lineHigh = SOV_ACTIVE_HIGH ? energize : !energize;
-    if (lineHigh && SOV_HIGH_BY_FLOAT && !SOV_ACTIVE_HIGH) {   // float only for active-LOW modules (they have the 5V pull-up)
-        pinMode(PIN_SV, INPUT);          // release: output register stays 0, pin floats to module pull-up
+    if (lineHigh && SOV_HIGH_BY_FLOAT && !SOV_ACTIVE_HIGH) {
+        pinMode(PIN_SV, INPUT);
     } else {
         pinMode(PIN_SV, OUTPUT);
         digitalWrite(PIN_SV, lineHigh ? HIGH : LOW);
     }
 }
 
+// Energizes solenoid valve OV-01 to establish fluid path to the process reservoir.
 void sovOpen() {
     sovDrive(true);
     Serial.printf("[ACTUATOR] Solenoid Valve OV-01 (GPIO %d) -> ENERGIZED / OPEN (%s)\n",
                   PIN_SV, SOV_ACTIVE_HIGH ? (SOV_HIGH_BY_FLOAT ? "released/float" : "HIGH 3.3V") : "driven LOW 0V");
 }
 
+// De-energizes solenoid valve OV-01 to isolate the process reservoir.
 void sovClose() {
     sovDrive(false);
     Serial.printf("[ACTUATOR] Solenoid Valve OV-01 (GPIO %d) -> DE-ENERGIZED / CLOSED (%s)\n",
                   PIN_SV, SOV_ACTIVE_HIGH ? "driven LOW 0V" : (SOV_HIGH_BY_FLOAT ? "released/float" : "HIGH 3.3V"));
 }
 
+// De-energizes all pumps and closes solenoid valve OV-01.
 void allOff() {
     pumpsOff();
     sovClose();
 }
 
-// ======================= STATE TRANSITION FUNCTIONS =======================
+// Transitions controller to IDLE standby with interlocks disarmed.
 void enterIdle(const char* reason) {
     allOff();
     state = ST_IDLE;
     singleGoMode = false;
     surgeDemonstrated = false;
-    masterInterlockArmed = false; // Disarm interlock -> locked in safe stop
-    calRunActive = false;         // An emergency stop cancels any open calibration run
+    masterInterlockArmed = false;
+    calRunActive = false;
     calModeNoFlowSinceMs = 0;
     Serial.printf("[STATE] -> IDLE (%s) | Master Safety Interlock: LOCKED (OFF)\n", reason);
 }
 
+// Enters FAULT safe state following dry-run detection or hardware timeout.
 void enterFault(const char* reason) {
     allOff();
     state = ST_FAULT;
@@ -396,11 +395,11 @@ void enterFault(const char* reason) {
     Serial.printf("[FAULT] TRIP: %s | Press switch or enter 'rt'/'stop' to clear.\n", reason);
 }
 
+// Starts Case 1 recirculation: opens OV-01, starts Pump-01 at 50% and Pump-02 at 100%.
 void startCase1Normal() {
-    masterInterlockArmed = true; // Automatically arm when Case 1 is triggered
+    masterInterlockArmed = true;
     surgeFloatClearMs = 0;
 
-    // Fresh run: zero the totalizers so 'total transferred litres' covers this demonstration only
     total_L = 0.0;
     totalL = 0.0f;
     totalFlushL = 0.0f;
@@ -408,22 +407,19 @@ void startCase1Normal() {
     stateStartMs = millis();
     lowFlowSinceMs = 0;
 
-    // 1. Instantly operate Solenoid Valve OV-01 at the very start of Case 1
     sovOpen();
     Serial.println("[CASE 1] Solenoid Valve OV-01 actively opened at Case 1 initiation.");
 
-    // 2. Hydraulic priming & motor inrush mitigation:
-    // Allow 200ms for solenoid valve to seat fully open and flood Pump 1 suction line
+    // Allows 200 ms for the valve disc to lift and pre-flood the suction line.
     if (SOV_PRE_OPEN_MS > 0) {
         delay(SOV_PRE_OPEN_MS);
     }
 
-    // 3. Energize recirculation pumps per specification (P1 @ 50%, P2 @ 100%)
     setAllPumps(PUMP1_C1_DUTY, PUMP2_C1_DUTY, 0.0f);
     Serial.println("[STATE] -> CASE 1 NORMAL: Recirculation active (SOV=OPEN, P1=50%, P2=100%).");
 }
 
-// Resume normal recirculation after a surge: solenoid is already open, so no priming delay and NO totalizer reset.
+// Resumes Case 1 after surge mitigation without zeroing the volume totalizer.
 void resumeCase1AfterSurge() {
     state = ST_CASE1_NORMAL;
     stateStartMs = millis();
@@ -432,7 +428,7 @@ void resumeCase1AfterSurge() {
     Serial.println("[STATE] -> CASE 1 NORMAL (resumed after surge): P1=50%, P2=100%.");
 }
 
-// Post-surge drain: isolate the 10L tank, stop Pump-01, keep Pump-02 @ 100% until the sump is dry (FT-01 flow collapses).
+// Isolates 10 L reservoir and evacuates the sump completely before starting Case 2.
 void enterCase1Drain() {
     state = ST_CASE1_DRAIN;
     stateStartMs = millis();
@@ -442,17 +438,18 @@ void enterCase1Drain() {
     Serial.println("[DRAIN] Sump drain started: SOV CLOSED, P1 OFF, P2 @ 100%, P3 OFF. Waiting for sump to empty...");
 }
 
+// Sump high level interlock: stops feed Pump-01 while Pump-02 drains excess volume at 100%.
 void enterCase1Surge() {
     state = ST_CASE1_SURGE;
     surgeFloatClearMs = 0;
     stateStartMs = millis();
 
-    // Sump Level Interlock (PDF Page 3): Stop Pump-01 immediately, keep Pump-02 running @ 100%
     sovOpen();
-    setAllPumps(0.0f, PUMP2_C1_DUTY, 0.0f); // P1 CUT OFF, P2 DRAINING @ 100%
+    setAllPumps(0.0f, PUMP2_C1_DUTY, 0.0f);
     Serial.println("[INTERLOCK] -> SUMP HIGH SURGE: Pump-01 STOPPED (0%), Pump-02 draining (100%).");
 }
 
+// Starts Case 2 flush: isolates 10 L tank and runs all 3 pumps simultaneously.
 void startCase2Flushing(uint32_t customDurationSec = 0) {
     state = ST_CASE2_FLUSHING;
     stateStartMs = millis();
@@ -463,10 +460,7 @@ void startCase2Flushing(uint32_t customDurationSec = 0) {
     flushFlowConfirmed = false;
     c2CustomDurationMs = customDurationSec * 1000UL;
 
-    // Isolate 10L Tank (PDF Page 3: "The On/Off valve must be switched off in order to isolate 10L tank")
     sovClose();
-
-    // All three pumps operate simultaneously per Case 2 specification
     setAllPumps(PUMP1_C2_DUTY, PUMP2_C2_DUTY, PUMP3_C2_DUTY);
     if (customDurationSec > 0) {
         Serial.printf("[STATE] -> CASE 2 FLUSHING (TIMED): Running all 3 pumps for %lu seconds.\n", (unsigned long)customDurationSec);
@@ -476,11 +470,12 @@ void startCase2Flushing(uint32_t customDurationSec = 0) {
     }
 }
 
+// Shuts down all process actuators and returns to safe IDLE.
 void stopAll(const char* reason) {
     enterIdle(reason);
 }
 
-// ---- Guarded calibration mode: lets an engineer run pumps/valve by hand and use S/E/V/FIT/APPLY safely ----
+// Enters guarded calibration mode for manual bench testing.
 void enterCalMode() {
     allOff();
     state = ST_CALMODE;
@@ -498,6 +493,7 @@ void enterCalMode() {
     Serial.println("============================================================");
 }
 
+// Exits calibration mode and restores system to safe IDLE state.
 void exitCalMode(const char* reason) {
     allOff();
     calRunActive = false;
@@ -515,7 +511,7 @@ void exitCalMode(const char* reason) {
     Serial.println("============================================================");
 }
 
-// ======================= INPUT HANDLING & DEBOUNCING =======================
+// Evaluates sump float switch with 250 ms mechanical noise debouncing.
 void handleFloatSwitch() {
     bool raw = digitalRead(PIN_FSW);
     bool high = FLOAT_CLOSED_IS_HIGH ? (raw == LOW) : (raw == HIGH);
@@ -531,28 +527,26 @@ void handleFloatSwitch() {
     }
 }
 
+// Handles short button press: arms and starts Case 1, or performs safe stop if running.
 void onShortPress() {
     if (state == ST_CALMODE) {
-        // Engineer is calibrating: the button must never start the process. It acts as a plain stop.
         pumpsOff();
         sovClose();
         Serial.println("[SWITCH] Calibration mode: button start disabled. Pumps OFF, solenoid CLOSED. Type 'calmode off' to leave.");
         return;
     }
     if (state == ST_IDLE) {
-        // Master Start: Arms Safety Interlock and starts automated sequence
         masterInterlockArmed = true;
         Serial.println("\n============================================================");
         Serial.println("  [SWITCH] MASTER SAFETY INTERLOCK: ARMED & RUNNING");
         Serial.println("  Initiating Case 1 Closed-Loop Recirculation...");
         Serial.println("============================================================");
-        singleGoMode = true; // Automatically advances to Case 2 after surge test per challenge rules
+        singleGoMode = true;
         startCase1Normal();
     } else if (state == ST_FAULT) {
         masterInterlockArmed = false;
         enterIdle("Fault cleared by operator via switch");
     } else {
-        // Running in ANY state (Case 1 Normal, Case 1 Surge, Case 2 Flush) -> SAFE SHUTDOWN OF ENTIRE PROCESS
         masterInterlockArmed = false;
         Serial.println("\n============================================================");
         Serial.println("  [SWITCH] MASTER STOP TRIPPED: Operator pressed switch.");
@@ -562,15 +556,16 @@ void onShortPress() {
     }
 }
 
+// Emergency stop triggered when tactile push button is held longer than 1500 ms.
 void onLongPress() {
-    // Hold > 1.5s: Instant hard emergency stop / disarm
     masterInterlockArmed = false;
     Serial.println("\n[SWITCH] EMERGENCY STOP: Button held > 1.5s. Immediate total shutdown.");
     stopAll("Emergency Long-Press Stop");
 }
 
+// Debounces tactile push button and discriminates between momentary and long presses.
 void handleTactileButton() {
-    if (!USE_PHYSICAL_SWITCH) return; // Physical switch bypassed
+    if (!USE_PHYSICAL_SWITCH) return;
 
     static bool stable = false;
     static bool lastRaw = false;
@@ -579,7 +574,7 @@ void handleTactileButton() {
     static uint32_t pressStart = 0;
 
     uint32_t now = millis();
-    bool raw = (digitalRead(PIN_SW) == LOW); // Active LOW on PCB
+    bool raw = (digitalRead(PIN_SW) == LOW);
 
     if (raw != lastRaw) {
         lastRaw = raw;
@@ -602,7 +597,7 @@ void handleTactileButton() {
     }
 }
 
-// ======================= CALIBRATION ANALYSIS & FIT ROUTINES =======================
+// Computes least-squares linear regression (Q = a*f + b) across stored calibration trials.
 void calculateFitAndPrint(bool brief = false) {
     if (trialCount == 0) {
         Serial.println("[CAL] No calibration trials recorded yet. Run 'S' -> 'E' -> 'V <vol>' to add trials.");
@@ -635,9 +630,7 @@ void calculateFitAndPrint(bool brief = false) {
     double denom = ((double)n * sum_f2) - (sum_f * sum_f);
 
     if (n >= 2 && fabs(denom) > 1e-9) {
-        // Fit slope: a = (n*Σ(fQ) - Σf*ΣQ) / (n*Σf² - (Σf)²)
         fit_a = (((double)n * sum_fQ) - (sum_f * sum_Q)) / denom;
-        // Fit offset: b = (ΣQ - a*Σf) / n
         fit_b = (sum_Q - (fit_a * sum_f)) / (double)n;
         fit_valid = true;
 
@@ -664,7 +657,6 @@ void calculateFitAndPrint(bool brief = false) {
                           f, trials[i].vol_L, Q_act, Q_cal, err);
         }
 
-        // Coefficient of determination: R² = 1 - Σ(Q_act - Q_cal)² / Σ(Q_act - Q_mean)²
         fit_r2 = (ss_tot > 1e-12) ? (1.0 - (ss_res / ss_tot)) : 1.0;
         fit_max_err = max_e;
         fit_avg_err = sum_e / (double)n;
@@ -696,12 +688,13 @@ void calculateFitAndPrint(bool brief = false) {
     }
 }
 
+// Starts pulse accumulation and microsecond timing for a volumetric calibration point.
 void startCalibrationRun() {
     calRunActive = true;
     calRunEnded = false;
     calHoldingResult = false;
     calStartUs = esp_timer_get_time();
-    calPulsesAtStart = (uint64_t)getPcntCount();   // live PCNT read, not the 1 s windowed total
+    calPulsesAtStart = (uint64_t)getPcntCount();
     run_pulses = 0;
     run_time_s = 0.0;
     run_freq_Hz = 0.0;
@@ -712,6 +705,7 @@ void startCalibrationRun() {
     Serial.println("[CAL] When collection finishes, send 'E' to end the run.");
 }
 
+// Freezes calibration timer and pulse count upon completion of a volumetric trial.
 void endCalibrationRun() {
     if (!calRunActive) {
         Serial.println("[CAL] No active run. Send 'S' first to begin a calibration run.");
@@ -721,7 +715,7 @@ void endCalibrationRun() {
     calRunActive = false;
     calRunEnded = true;
     calHoldingResult = true;
-    uint64_t endCount = (uint64_t)getPcntCount();   // live PCNT read, aligned with calEndUs
+    uint64_t endCount = (uint64_t)getPcntCount();
     run_pulses = (endCount >= calPulsesAtStart) ? (endCount - calPulsesAtStart) : 0;
     run_time_s = (double)(calEndUs - calStartUs) / 1e6;
     run_freq_Hz = (run_time_s > 0.0) ? ((double)run_pulses / run_time_s) : 0.0;
@@ -733,6 +727,7 @@ void endCalibrationRun() {
     Serial.println("[CAL] Please enter measured collection volume: 'V <litres>' (e.g. 'V 1.00' or simply '1.00')");
 }
 
+// Records measured volumetric beaker volume and calculates empirical flow rate and error.
 void recordCollectedVolume(double volL) {
     if (volL <= 0.0) {
         Serial.println("[CAL] Error: Collected volume must be > 0.0 Litres.");
@@ -743,16 +738,10 @@ void recordCollectedVolume(double volL) {
         return;
     }
     V_collected = volL;
-    // Q_actual_Lmin = V_collected / run_time_s * 60.0
     Q_actual_Lmin = (run_time_s > 0.0) ? (V_collected / run_time_s * 60.0) : 0.0;
 
-    // Q_Lmin_run = CAL_A * run_freq_Hz + CAL_B
     double Q_Lmin_run = (CAL_A * run_freq_Hz) + CAL_B;
-
-    // error_pct = fabs(Q_Lmin_run - Q_actual_Lmin) / Q_actual_Lmin * 100.0
     error_pct = (Q_actual_Lmin > 0.0) ? (fabs(Q_Lmin_run - Q_actual_Lmin) / Q_actual_Lmin * 100.0) : 0.0;
-
-    // K-factor: K = run_pulses / V (pulses/L)
     double k_factor = (V_collected > 0.0) ? ((double)run_pulses / V_collected) : 0.0;
 
     if (trialCount < MAX_TRIALS) {
@@ -782,6 +771,7 @@ void recordCollectedVolume(double volL) {
     calculateFitAndPrint(true);
 }
 
+// Applies newly computed regression coefficients directly to active RAM parameters.
 void applyCalibrationFit() {
     if (!fit_valid) {
         Serial.println("[CAL] Error: No valid regression fit to apply. Record at least 2 trials first.");
@@ -835,6 +825,7 @@ void applyCalibrationFit() {
     }
 }
 
+// Populates 5-point challenge verification dataset for calibration algorithm testing.
 void loadDemoTrials() {
     struct DemoPt { uint64_t n; double t; double v; };
     DemoPt pts[5] = {
@@ -860,6 +851,7 @@ void loadDemoTrials() {
     calculateFitAndPrint(false);
 }
 
+// Clears stored calibration trials and resets accumulators to zero.
 void resetCalibrationTrials() {
     trialCount = 0;
     fit_valid = false;
@@ -874,7 +866,7 @@ void resetCalibrationTrials() {
     Serial.println("[CAL] Reset calibration trials and run fields to zero.");
 }
 
-// ======================= FLOW COMPUTATION & SERIAL STUDIO DAQ =======================
+// Integrates flow pulses and outputs real-time Serial Studio DAQ telemetry frame once per second.
 void updateFlowAndTelemetry() {
     int64_t t_now_us = esp_timer_get_time();
     if (tPrevUs == 0) {
@@ -887,37 +879,24 @@ void updateFlowAndTelemetry() {
         return;
     }
 
-    // Measured real window time (not nominal 1 s)
     window_s = elapsed_s;
     tPrevUs = t_now_us;
-
-    // Time since boot in seconds: time_s = esp_timer_get_time() / 1e6
     time_s = (double)t_now_us / 1e6;
 
-    // Pulses (N) = cnt_now - cnt_prev (PCNT delta in the window)
     int64_t cnt_now = getPcntCount();
     int64_t N = cnt_now - cnt_prev;
     if (N < 0) N = 0;
     cnt_prev = cnt_now;
     lastWindowN = N;
 
-    // Pulse frequency: freq_Hz = N / window_s
     freq_Hz = (window_s > 0.0) ? ((double)N / window_s) : 0.0;
 
-    // Flow rate: Q_Lmin = max(CAL_A * freq_Hz + CAL_B, 0)
-    // Noise gate: below FLOW_CUTOFF_HZ report zero so a non-zero offset b cannot create phantom flow/volume
+    // Zero-flow noise gate: below 1.0 Hz, reported flow is zero to suppress non-zero intercept creep.
     Q_Lmin = (freq_Hz < FLOW_CUTOFF_HZ) ? 0.0 : fmax((CAL_A * freq_Hz) + CAL_B, 0.0);
-
-    // Flow rate: Q_mLs = Q_Lmin * 1000.0 / 60.0
     Q_mLs = Q_Lmin * 1000.0 / 60.0;
-
-    // Volume totalizer: total_L += (Q_Lmin / 60.0) * window_s
     total_L += (Q_Lmin / 60.0) * window_s;
-
-    // Pulse totalizer: total_pulses += N (64-bit)
     total_pulses += (uint64_t)N;
 
-    // Sync legacy variables for existing FSM interlocks
     flowFreqHz = (float)freq_Hz;
     flowLpm = (float)Q_Lmin;
     flowMls = (float)Q_mLs;
@@ -928,7 +907,6 @@ void updateFlowAndTelemetry() {
     }
     newFlowSample = true;
 
-    // Calibration run fields
     uint64_t cur_run_pulses = 0;
     double cur_run_time_s = 0.0;
     double cur_run_freq_Hz = 0.0;
@@ -949,8 +927,7 @@ void updateFlowAndTelemetry() {
         cur_error_pct = error_pct;
     }
 
-    // SERIAL STUDIO DAQ FRAME FORMAT PER SPECIFICATION:
-    // Format: /*time_s,pulses,window_s,freq_Hz,Q_Lmin,Q_mLs,total_L,total_pulses,run_pulses,run_time_s,run_freq_Hz,Q_actual_Lmin,error_pct*/
+    // Telemetry output: /*time_s,pulses,window_s,freq_Hz,Q_Lmin,Q_mLs,total_L,total_pulses,run_pulses,run_time_s,run_freq_Hz,Q_actual_Lmin,error_pct*/
     Serial.printf("/*%.3f,%lld,%.4f,%.2f,%.3f,%.2f,%.4f,%llu,%llu,%.3f,%.2f,%.3f,%.2f*/\r\n",
                   time_s,
                   (long long)N,
@@ -967,7 +944,7 @@ void updateFlowAndTelemetry() {
                   cur_error_pct);
 }
 
-// ======================= CORE PROCESS CONTROL LOOPS =======================
+// Executes core finite state machine logic and transitions.
 void executeProcessControl() {
     uint32_t now = millis();
 
@@ -976,13 +953,13 @@ void executeProcessControl() {
             break;
 
         case ST_CASE1_NORMAL:
-            // Sump Level Interlock: Pump 1 ONLY stops when the Sump gets FULL (Float Switch Trips HIGH)
+            // Sump high level interlock: stops Pump-01 to mitigate overflow.
             if (floatHigh) {
                 enterCase1Surge();
                 return;
             }
 
-            // Single-Go Auto-Advance: If surge mitigation was demonstrated and stabilized for 20s, transition directly to Case 2
+            // Advances to Case 2 after surge mitigation has stabilized for 20 s.
             if (singleGoMode && surgeDemonstrated && (now - surgeClearMs >= C1_RECOVERY_DWELL_MS)) {
                 Serial.println("\n[SINGLE-GO] Sump surge mitigation demonstrated and stable recovery confirmed!");
                 Serial.println("[SINGLE-GO] Transitioning directly to Case 2 flush sequence in a single go...");
@@ -992,7 +969,7 @@ void executeProcessControl() {
             break;
 
         case ST_CASE1_SURGE:
-            // Sump Level Mitigation: If sump level has subsided below float switch -> restore normal
+            // Restores Pump-01 feed when sump level drops below the float switch for 3 s.
             if (floatHigh) {
                 surgeFloatClearMs = 0;
             } else {
@@ -1008,7 +985,6 @@ void executeProcessControl() {
             break;
 
         case ST_CASE1_DRAIN: {
-            // Sump is empty when Pump-02 runs dry: FT-01 flow collapses and stays collapsed.
             static uint32_t lastDrainPrintMs = 0;
             if (now - lastDrainPrintMs >= 2000) {
                 lastDrainPrintMs = now;
@@ -1038,13 +1014,11 @@ void executeProcessControl() {
         case ST_CASE2_FLUSHING: {
             uint32_t elapsed = now - stateStartMs;
 
-            // Global safety timeout
             if (elapsed > C2_MAX_RUN_MS) {
                 enterFault("Case 2 Flush safety timeout exceeded (10 min)");
                 return;
             }
 
-            // Timed Mode (e.g. 'case2 45' for bench testing)
             if (c2CustomDurationMs > 0) {
                 if (elapsed >= c2CustomDurationMs) {
                     pumpsOff();
@@ -1055,7 +1029,6 @@ void executeProcessControl() {
                 break;
             }
 
-            // Automatic Flush Batch Completion: Set to 90 s (1 min 30 s) for 4.2 L flush tank to empty
             if (c2CustomDurationMs == 0 && elapsed >= C2_AUTO_MAX_RUN_MS) {
                 pumpsOff();
                 stopStartMs = now;
@@ -1065,30 +1038,23 @@ void executeProcessControl() {
                 break;
             }
 
-            // Periodic live telemetry to console every 2 seconds for clear real-time monitoring
             if (now - lastC2PrintMs >= 2000) {
                 lastC2PrintMs = now;
                 Serial.printf("[C2 LIVE] Time: %lu s | Flow: %.2f L/min | Flushed: %.3f L / 4.15 L\n",
                               (unsigned long)(elapsed / 1000), flowLpm, totalFlushL);
             }
 
-            // Autonomous Problem Statement Mode:
-            // 1. Line Priming Window: Confirm fluid reaches FT-01
             if (!flushFlowConfirmed) {
-                // Sump was drained before Case 2, so FT-01 flow starts at ~0: flow rising now genuinely means flush water has arrived.
                 if (flowLpm >= FLOW_MIN_VALID) {
                     flushFlowConfirmed = true;
                     Serial.printf("[C2] Flush fluid detected at FT-01 (Flow: %.2f L/min). Line actively primed!\n", flowLpm);
                 } else if (elapsed > C2_PRIME_MS) {
-                    // Flush line priming failed after 25s
                     enterFault("Case 2 Priming Timeout: Zero flow after 25s. Ensure BV-02 valve is OPEN!");
                     return;
                 }
             }
 
-            // 2. Depletion Detection (PDF Requirement: Stop as soon as 4.2L flush finishes or air is sucked)
-            // Guard: Arm depletion detection only after line priming is confirmed, 10s startup grace has passed,
-            // and at least 300 mL has been delivered (prevents startup ramp-up transients from triggering air collapse).
+            // Depletion detection: triggers shutdown on 4.15 L delivery or when flow collapses below 0.35 L/min.
             bool depletionArmed = flushFlowConfirmed && (elapsed >= C2_STARTUP_GRACE_MS) && (totalFlushL >= C2_MIN_FLUSH_ARM_L);
 
             if (depletionArmed && newFlowSample) {
@@ -1112,14 +1078,15 @@ void executeProcessControl() {
                     }
                 } else {
                     if (c2LowFlowSamples > 0) c2LowFlowSamples--;
-                    lowFlowSinceMs = 0; // Healthy flow
+                    lowFlowSinceMs = 0;
                 }
             }
             break;
         }
 
         case ST_CASE2_STOPPING:
-            // Staggered shutdown: Close solenoid valve 500ms after pumps to eliminate pressure shocks
+            // Staggered shutdown: Close solenoid valve 500 ms after pumps stop.
+            // NOTE: Solenoid valve was already closed at Case 2 initiation; this ensures safe de-energization.
             if (now - stopStartMs >= SOV_CLOSE_DELAY_MS) {
                 sovClose();
                 enterIdle("Case 2 Flush sequence complete. System safely OFF.");
@@ -1129,12 +1096,10 @@ void executeProcessControl() {
             break;
 
         case ST_CALMODE: {
-            // Guard 1: sump float HIGH -> cut Pump-1 (no overflow while filling by hand)
             if (floatHigh && pumpDutyPct[0] > 0.0f) {
                 setPump(0, 0.0f);
                 Serial.println("[CALMODE] Sump float HIGH -> Pump-1 STOPPED.");
             }
-            // Guard 2: Pump-2 running with no flow (sump dry, hose pulled or line blocked) -> Pump-2 off
             if (pumpDutyPct[1] > 0.0f) {
                 if (newFlowSample) {
                     if (flowLpm < CALMODE_NOFLOW_LPM) {
@@ -1151,7 +1116,6 @@ void executeProcessControl() {
             } else {
                 calModeNoFlowSinceMs = 0;
             }
-            // Guard 3: nobody has typed a command for a while -> stop everything and leave calibration mode
             if (now - calModeLastCmdMs >= CALMODE_IDLE_TIMEOUT_MS) {
                 exitCalMode("no command for 120 s");
                 return;
@@ -1164,7 +1128,7 @@ void executeProcessControl() {
     }
 }
 
-// ======================= SERIAL CLI COMMAND INTERPRETER =======================
+// Parses incoming serial commands at 115200 baud.
 void handleSerialCLI() {
     static String rx;
     static uint32_t lastCharMs = 0;
@@ -1181,7 +1145,6 @@ void handleSerialCLI() {
         }
     }
 
-    // Inter-character timeout: Execute even if no newline was sent (e.g. Serial Studio 'No Line Ending')
     if (!execute && rx.length() > 0 && (millis() - lastCharMs > 80)) {
         execute = true;
     }
@@ -1198,14 +1161,12 @@ void handleSerialCLI() {
 
     Serial.printf("[CMD] Received: '%s'\n", cmd.c_str());
 
-    // Master Emergency Stop command is ALWAYS permitted at any millisecond
     if (cmd == "stop" || cmd == "x" || cmd == "0" || cmd == "halt" || cmd == "kill") {
         masterInterlockArmed = false;
         stopAll("CLI Emergency Stop Command");
         return;
     }
 
-    // ======================= CALIBRATION MODE ('calmode on' / 'calmode off') =======================
     if (cmd == "calmode on" || cmd == "calmode start") {
         if (state == ST_CALMODE) {
             Serial.println("[CALMODE] Already in calibration mode. Type 'calmode off' to leave.");
@@ -1228,7 +1189,6 @@ void handleSerialCLI() {
         Serial.println("[CALMODE] Usage: 'calmode on' or 'calmode off'.");
         return;
     }
-    // Block process starts while an engineer is calibrating
     if (state == ST_CALMODE && (cmd == "case1" || cmd == "s1" || cmd == "c1" || cmd == "1" ||
                                 cmd == "case2" || cmd == "s2" || cmd == "c2" || cmd == "2" ||
                                 cmd.startsWith("case2 ") || cmd.startsWith("c2 ") ||
@@ -1237,20 +1197,16 @@ void handleSerialCLI() {
         return;
     }
 
-    // ======================= CALIBRATION CLI COMMANDS ('S', 'E', 'V') =======================
-    // 'S' - Start calibration run
     if (cmd == "s" || cmd == "start" || cmd == "cal s" || cmd == "cal start") {
         startCalibrationRun();
         return;
     }
 
-    // 'E' - End calibration run
     if (cmd == "e" || cmd == "end" || cmd == "cal e" || cmd == "cal end") {
         endCalibrationRun();
         return;
     }
 
-    // 'V <litres>' - Enter collected volume
     if (cmd.startsWith("v ") || cmd.startsWith("vol ")) {
         int sp = cmd.indexOf(' ');
         double v = cmd.substring(sp + 1).toDouble();
@@ -1258,7 +1214,6 @@ void handleSerialCLI() {
         return;
     }
 
-    // If waiting for volume after 'E', permit directly typing the number (e.g. "1.00")
     if (calHoldingResult && (V_collected == 0.0)) {
         double v = cmd.toDouble();
         if (v > 0.0) {
@@ -1267,19 +1222,16 @@ void handleSerialCLI() {
         }
     }
 
-    // 'FIT' / 'CAL' / 'REPORT' - Print on-demand linear regression and error analysis
     if (cmd == "fit" || cmd == "cal" || cmd == "report") {
         calculateFitAndPrint(false);
         return;
     }
 
-    // 'APPLY' / 'UPDATE' - Apply fitted slope 'a' & offset 'b' to CAL_A & CAL_B and verify error drop
     if (cmd == "apply" || cmd == "update" || cmd == "cal apply") {
         applyCalibrationFit();
         return;
     }
 
-    // Manual calibration coefficient overrides
     if (cmd.startsWith("cal_a ")) {
         CAL_A = cmd.substring(6).toDouble();
         Serial.printf("[SET] Active CAL_A set to %.6f\n", CAL_A);
@@ -1291,7 +1243,6 @@ void handleSerialCLI() {
         return;
     }
 
-    // Nominal window setting in seconds (default 1.0 s)
     if (cmd.startsWith("window ") || cmd.startsWith("w ")) {
         int sp = cmd.indexOf(' ');
         double w = cmd.substring(sp + 1).toDouble();
@@ -1304,19 +1255,16 @@ void handleSerialCLI() {
         return;
     }
 
-    // Demo calibration dataset for instant mathematical verification
     if (cmd == "demo" || cmd == "test_fit") {
         loadDemoTrials();
         return;
     }
 
-    // Reset calibration trials and run fields
     if (cmd == "c" || cmd == "clear" || cmd == "cal_reset") {
         resetCalibrationTrials();
         return;
     }
 
-    // Remote Interlock Arm / Disarm controls
     if (cmd == "arm" || cmd == "unlock") {
         masterInterlockArmed = true;
         Serial.println("[SAFETY INTERLOCK] System REMOTELY ARMED. Process commands permitted.");
@@ -1328,7 +1276,6 @@ void handleSerialCLI() {
         return;
     }
 
-    // Direct Actuator Controls (Always allowed for bench diagnostics)
     if (cmd == "sov inv" || cmd == "sov pol") {
         SOV_ACTIVE_HIGH = !SOV_ACTIVE_HIGH;
         Serial.printf("[ACTUATOR] Solenoid polarity toggled: Active %s (relay re-set to OFF/closed)\n",
@@ -1341,7 +1288,6 @@ void handleSerialCLI() {
         return;
     }
 
-    // Process Start Commands: Auto-arm on explicit user demand
     if (cmd == "case1" || cmd == "s1" || cmd == "c1" || cmd == "1") {
         masterInterlockArmed = true;
         startCase1Normal();
@@ -1364,7 +1310,6 @@ void handleSerialCLI() {
         return;
     }
 
-    // Manual Pump Controls (Auto-arms for bench testing convenience)
     bool isPumpCmd = (cmd.startsWith("p1 ") || cmd.startsWith("p2 ") || cmd.startsWith("p3 "));
     if (isPumpCmd) {
         masterInterlockArmed = true;
@@ -1442,55 +1387,47 @@ void handleSerialCLI() {
     }
 }
 
-// ======================= ARDUINO / ESP-IDF SETUP & LOOP =======================
+// Configures hardware peripherals, timers, and external interrupts.
 void setup() {
     Serial.begin(115200);
 
-    // Keep ESP_LOG output off the frame channel so Serial Studio doesn't parse log lines as frames
     esp_log_level_set("*", ESP_LOG_NONE);
 
-    // 1. Initialise all actuators to safe OFF state first (relay released)
     sovDrive(false);
 
-    // Initialise Pump 1 (U2) Enable lines (energize both 13 and 12 to guarantee enable)
     pinMode(12, OUTPUT);
     digitalWrite(12, LOW);
     pinMode(13, OUTPUT);
     digitalWrite(13, LOW);
-    pinMode(PUMP[0].rEn, OUTPUT); // GPIO 26
+    pinMode(PUMP[0].rEn, OUTPUT);
     digitalWrite(PUMP[0].rEn, LOW);
-    PWM_ATTACH(PUMP[0].lPwm, 0);  // GPIO 32
-    PWM_ATTACH(PUMP[0].rPwm, 1);  // GPIO 33
+    PWM_ATTACH(PUMP[0].lPwm, 0);
+    PWM_ATTACH(PUMP[0].rPwm, 1);
 
-    // Initialise Pump 2 (U3)
-    pinMode(PUMP[1].lEn, OUTPUT); // GPIO 16
+    pinMode(PUMP[1].lEn, OUTPUT);
     digitalWrite(PUMP[1].lEn, LOW);
-    pinMode(PUMP[1].rEn, OUTPUT); // GPIO 17
+    pinMode(PUMP[1].rEn, OUTPUT);
     digitalWrite(PUMP[1].rEn, LOW);
-    PWM_ATTACH(PUMP[1].lPwm, 2);  // GPIO 18
-    pinMode(PUMP[1].rPwm, OUTPUT); // GPIO 19 - unused reverse PWM, hold LOW
+    PWM_ATTACH(PUMP[1].lPwm, 2);
+    pinMode(PUMP[1].rPwm, OUTPUT);
     digitalWrite(PUMP[1].rPwm, LOW);
 
-    // Initialise Pump 3 (U4)
-    pinMode(PUMP[2].lEn, OUTPUT); // GPIO 21
+    pinMode(PUMP[2].lEn, OUTPUT);
     digitalWrite(PUMP[2].lEn, LOW);
-    pinMode(PUMP[2].rEn, OUTPUT); // GPIO 22
+    pinMode(PUMP[2].rEn, OUTPUT);
     digitalWrite(PUMP[2].rEn, LOW);
-    PWM_ATTACH(PUMP[2].lPwm, 4);  // GPIO 23
-    pinMode(PUMP[2].rPwm, OUTPUT); // GPIO 25 - unused reverse PWM, hold LOW
+    PWM_ATTACH(PUMP[2].lPwm, 4);
+    pinMode(PUMP[2].rPwm, OUTPUT);
     digitalWrite(PUMP[2].rPwm, LOW);
 
     pumpsOff();
 
-    // 2. Initialise physical digital inputs matching schematic & hardware bench
-    pinMode(PIN_FS, INPUT_PULLUP);        // GPIO 14 (Flow Sensor FT-01 Primary on Pin 12 labeled FS)
-    pinMode(PIN_FSW, INPUT);              // GPIO 35 (Sump Float Switch on Pin 6 labeled FSW, 10k R10 pullup)
-    pinMode(PIN_SW, INPUT);               // GPIO 34 (ON/OFF Switch on Pin 5 labeled SW, 10k R2 pullup)
+    pinMode(PIN_FS, INPUT_PULLUP);
+    pinMode(PIN_FSW, INPUT);
+    pinMode(PIN_SW, INPUT);
 
-    // Hardware Pulse Counter (PCNT) configuration on GPIO 14
     initPCNT();
 
-    // Attach interrupts on physical pins (FALLING mode gives 1 pulse per cycle matching PCNT)
     attachInterrupt(digitalPinToInterrupt(PIN_FS), onFlowPulseISR14, FALLING);
     attachInterrupt(digitalPinToInterrupt(PIN_FSW), onFlowPulseISR35, CHANGE);
     attachInterrupt(digitalPinToInterrupt(PIN_SW), onFlowPulseISR34, FALLING);
@@ -1506,7 +1443,7 @@ void setup() {
 
     if (AUTO_START_ON_BOOT) {
         Serial.println("[AUTO-START] Physical switch bypassed. Starting normal rig operation in 1.5s...");
-        delay(1500); // Safe delay for power rails to stabilize
+        delay(1500);
         masterInterlockArmed = true;
         startCase1Normal();
     } else {
@@ -1516,6 +1453,7 @@ void setup() {
     }
 }
 
+// Main execution loop: CLI handling, sensor debouncing, telemetry streaming, and FSM.
 void loop() {
     handleSerialCLI();
     if (USE_PHYSICAL_SWITCH) {
@@ -1527,5 +1465,6 @@ void loop() {
 
     newFlowSample = false;
 
-    delay(2); // Yield CPU to FreeRTOS IDLE task (prevents task_wdt triggers)
+    // Yields CPU to FreeRTOS IDLE task to prevent task watchdog timer timeouts.
+    delay(2);
 }
