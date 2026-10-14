@@ -22,7 +22,21 @@ All engineering documentation, build instructions, Git workflows, and calibratio
 
 ---
 
-## 1. System Overview
+## 1. Team Members & Project Roles
+
+- **Institution:** Nitte (Deemed to be University) - NMAM Institute of Technology
+- **Team Identifier:** LRC-26-0528 | **Team Name:** Team DISTRO
+
+| Name | Role | Department | USN | Email | GitHub | Contribution |
+|---|---|---|---|---|---|---|
+| **Sonal Hegde** | Team Leader | Department of ECE | NNM24AC050 | [nnm24ac050@nmamit.in](mailto:nnm24ac050@nmamit.in) | [@Sonalhegde](https://github.com/Sonalhegde) | Coding and Documentation |
+| **Pratham Amin** | Member | Department of Mechanical Engineering | NNM24ME084 | [nnm24me084@nmamit.in](mailto:nnm24me084@nmamit.in) | [@pratham885](https://github.com/pratham885) | Piping, 3D Printing, CAD, Layout Designing, and Calibration |
+| **Jostan Saldanha** | Member | Department of ECE | NNM25AC502 | [nnm25ac502@nmamit.in](mailto:nnm25ac502@nmamit.in) | [@jostan-saldanha](https://github.com/jostan-saldanha) | Electronics and Firmware |
+| **Mohammed Araan** | Member | Department of CSE | NNM24CS142 | [nnm24cs142@nmamit.in](mailto:nnm24cs142@nmamit.in) | [@Araan-Sheikh](https://github.com/Araan-Sheikh) | Video Editing and 3D Modelling |
+
+---
+
+## 2. System Overview
 
 ### Case 1: Closed-Loop Recirculation with Sump Level Protection
 - **Normal Recirculation:** Solenoid valve OV-01 opens; Pump-1 operates at 50% duty cycle to feed fluid from the 10 L main reservoir into the sump, and Pump-2 runs at 100% duty cycle to pump fluid through the FT-01 turbine flow meter and return it to the 10 L tank, maintaining a steady 3.0 L/min flow.
@@ -36,7 +50,7 @@ All engineering documentation, build instructions, Git workflows, and calibratio
 
 ---
 
-## 2. Hardware Components
+## 3. Hardware Components
 
 ### Mechanical hardware
 | Component | Description | Main use |
@@ -70,7 +84,7 @@ All engineering documentation, build instructions, Git workflows, and calibratio
 
 ---
 
-## 3. 3D-Printed Parts and Mounts
+## 4. 3D-Printed Parts and Mounts
 
 Custom 3D-printed mechanical components secure the electrical and hydraulic assemblies to the aluminum rig frame. STL files are located in [`cad/`](cad/).
 
@@ -85,7 +99,7 @@ Custom 3D-printed mechanical components secure the electrical and hydraulic asse
 
 ---
 
-## 4. Repository Layout
+## 5. Repository Layout
 
 ```text
 TEAM_DISTRO/
@@ -138,7 +152,7 @@ TEAM_DISTRO/
 
 ---
 
-## 5. Getting the Code (Git Guide)
+## 6. Getting the Code (Git Guide)
 
 ### 1. First-Time Git Configuration
 Before committing, set your username and email:
@@ -192,7 +206,7 @@ If `git pull` reports merge conflicts with your local edits:
 
 ---
 
-## 6. Firmware Setup & Build Guide
+## 7. Firmware Setup & Build Guide
 
 The controller firmware is located in [`firmware/`](firmware/) and targets the ESP32 NodeMCU-32S board.
 
@@ -277,7 +291,7 @@ The `.bat` scripts live inside `firmware/` and `analysis/` next to the code they
 
 ---
 
-## 7. Serial Studio Real-Time Telemetry Dashboard
+## 8. Serial Studio Real-Time Telemetry Dashboard
 
 The firmware broadcasts real-time telemetry frames once per second at **115200 baud** (8-N-1):
 
@@ -302,7 +316,7 @@ The firmware broadcasts real-time telemetry frames once per second at **115200 b
 
 ---
 
-## 8. Data Analysis Scripts (MATLAB)
+## 9. Data Analysis Scripts (MATLAB)
 
 The repository provides automated MATLAB scripts in [`analysis/`](analysis/) for sensor calibration regression and valve throttling characterization.
 
@@ -344,7 +358,7 @@ The repository provides automated MATLAB scripts in [`analysis/`](analysis/) for
 
 ---
 
-## 9. Calibration & Results Summary
+## 10. Calibration & Results Summary
 
 Physical catch-and-weigh calibration was conducted on the rig using water at $25^\circ\text{C}$ across six flow rates spanning 0.775 to 2.040 L/min, with an independent validation trial at 1.110 L/min.
 
@@ -361,23 +375,9 @@ $$\dot{Q}\ (\text{L/min}) = 0.009244 \times f\ (\text{Hz}) + 0.040111$$
 
 ---
 
-## 10. Known Limitations
+## 11. Known Limitations
 
 1. **Rotor Inertia and Low-Velocity Cutoff:** The FT-01 micro-turbine rotor exhibits boundary friction below 1.0 Hz (~0.05 L/min). Flow rates below 0.50 L/min are treated as zero flow by the software noise gate to prevent zero-flow integration creep.
 2. **Manual Ball Valve Repeatability:** Ball valves BV-01 and BV-02 rely on manual handle alignment. Slight positioning variance ($\pm 5^\circ$) can alter line resistance by $\approx 0.10\text{ L/min}$ at lower throttle angles.
 3. **Optocoupler Relay High-Impedance Requirement:** The 5 V optocoupler relay board requires a 5 V pull-up to fully turn off. To prevent 3.3 V GPIO back-powering, the firmware releases the pin to high-impedance mode (`pinMode(PIN_SV, INPUT)`) when commanded closed.
 4. **FreeRTOS Single-Core Loop Yield:** The main `loop()` function includes a mandatory `delay(2)` yield call to prevent triggering the ESP-IDF FreeRTOS Task Watchdog Timer (`IDLE0` starvation).
-
----
-
-## 11. Team Members & Project Roles
-
-- **Institution:** Nitte (Deemed to be University) - NMAM Institute of Technology
-- **Team Identifier:** LRC-26-0528 | **Team Name:** Team DISTRO
-
-| Name | Role | Department | USN | Email | GitHub | Contribution |
-|---|---|---|---|---|---|---|
-| **Sonal Hegde** | Team Leader | Department of ECE | NNM24AC050 | nnm24ac050@nmamit.in | [@Sonalhegde](https://github.com/Sonalhegde) | Coding and Documentation |
-| **Pratham Amin** | Member | Department of Mechanical Engineering | NNM24ME084 | nnm24me084@nmamit.in | [@pratham885](https://github.com/pratham885) | Piping, 3D Printing, CAD, and Calibration |
-| **Jostan Saldanha** | Member | Department of ECE | NNM25AC502 | nnm25ac502@nmamit.in | [@jostan-saldanha](https://github.com/jostan-saldanha) | Electrical and Coding |
-| **Mohammed Araan** | Member | Department of CSE | NNM24CS142 | nnm24cs142@nmamit.in | [@Araan-Sheikh](https://github.com/Araan-Sheikh) | Video Editing and 3D Modelling |
