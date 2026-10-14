@@ -14,6 +14,12 @@
 
 👉 **[Launch Live 3D Digital Twin Simulation](https://sonalhegde.github.io/TEAM_DISTRO/)** 👈
 
+<br/><br/>
+
+![Physical Experimental Rig Setup](media/physical_rig_setup.jpg)
+
+*Figure 1: Physical Experimental Rig Setup — 10 L main reservoir, 4.2 L flush reservoir, 4.5 L sump, 3 pumps, BTS7960 drivers, ESP32 NodeMCU-32S, FT-01 pulse turbine flow meter, solenoid valve OV-01, and float switch LS-01.*
+
 </div>
 
 This repository provides the complete embedded controller firmware, MATLAB calibration analysis scripts, 3D printable CAD models, and real-time DAQ dashboard for the Lam Research Challenge 3.0 Stage 2 automated liquid-handling rig (Team ID: LRC-26-0528).
