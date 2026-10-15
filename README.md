@@ -44,8 +44,18 @@ All engineering documentation, build instructions, Git workflows, and calibratio
 
 ## 2. System Overview
 
-![Finite State Machine](media/state_machine.svg)
-*Figure 2: Finite State Machine Architecture showing operational states, level interlock, and automated transition sequence.*
+The controller finite state machine (FSM) executes automated liquid handling across two primary operating cases, governed by strict level interlocks and hydrodynamic thresholds:
+
+### Operational State Matrix
+All operational states are implemented in [`firmware/main/config.h`](firmware/main/config.h) and managed by the non-blocking control loop:
+
+| State Name | State ID | Solenoid OV-01 | Pump 1 Duty | Pump 2 Duty | Pump 3 Duty | Entry & Exit Conditions |
+|---|:---:|:---:|:---:|:---:|:---:|---|
+| **`ST_IDLE`** | 0 | CLOSED (High-Z) | 0% | 0% | 0% | Safe standby. Awaits operator start command (`1`, `2`, `a`, or SW-01). |
+| **`ST_CASE1_RECIRC`** | 1 | OPEN (Active LOW) | 50% | 100% | 0% | Recirculates fluid at steady 3.0 L/min. Transitions to `ST_CASE1_SURGE_HOLD` if LS-01 trips. |
+| **`ST_CASE1_SURGE_HOLD`** | 2 | OPEN (Active LOW) | 0% | 100% | 0% | Overflow protection interlock. Pump 1 halted; Pump 2 clears sump until LS-01 clears for 3.0 s. |
+| **`ST_CASE2_FLUSH_RUN`** | 3 | CLOSED (High-Z) | 50% | 100% | 100% | Concurrent 3-pump flush. Shuts down when flow collapses (< 0.35 L/min) or delivered volume reaches 4.15 L. |
+| **`ST_FAULT`** | 4 | CLOSED (High-Z) | 0% | 0% | 0% | Emergency lockout on dry-run timeout (> 3.0 s) or sensor failure. Requires manual reset. |
 
 ### Case 1: Closed-Loop Recirculation with Sump Level Protection
 - **Normal Recirculation:** Solenoid valve OV-01 opens (with a 200 ms non-blocking lead to pre-flood the suction line). Pump-1 operates at 50% PWM duty cycle to feed fluid from the 10 L main reservoir into the sump, while Pump-2 runs at 100% duty cycle to pump fluid through the FT-01 turbine flow meter and return it to the 10 L tank, maintaining steady 3.0 L/min closed-loop recirculation.
@@ -66,11 +76,11 @@ All engineering documentation, build instructions, Git workflows, and calibratio
 
 ## 3. Hardware Components & Electrical Pinout
 
-![P&ID Diagram](media/pid_diagram.svg)
-*Figure 3: Piping and Instrumentation Diagram (P&ID) showing fluid circuits, pump orientations, and sensor placements.*
-
-![Electrical Schematic](media/electrical_schematic.svg)
-*Figure 4: Electrical Connection Schematic for ESP32, BTS7960 motor drivers, solenoid driver, and sensors.*
+### Fluid Process Architecture & Routing
+The hydraulic circuit connects three dedicated reservoirs via 8 mm polyurethane tubing:
+- **10 L Main Process Tank:** Primary liquid reservoir. Supplies fluid through Solenoid Valve OV-01 to the sump, and receives returned fluid from Pump 2 discharge through the FT-01 turbine flow meter.
+- **4.2 L Flush Tank:** Supplies deionized flush liquid directly to the suction side of Pump 3 during Case 2 automated line clearance.
+- **4.5 L Sump Vessel:** Intermediate buffer receiving liquid from Pump 1 feed line and external fluid additions. Monitored by reed float switch LS-01 mounted at the high-level boundary. Evacuated back to the 10 L reservoir by Pump 2.
 
 ### Hardware Pinout (LAM Stage 2 PCB Rev 1.0)
 All hardware pins are defined in [`firmware/main/config.h`](firmware/main/config.h):
@@ -145,9 +155,6 @@ TEAM_DISTRO/
 │   ├── ft01_calibration_error.png Calibration error vs flow rate bar chart
 │   ├── valve_position_vs_flow.png Ball valve throttling characteristic curve
 │   ├── serial_studio_dashboard.png Serial Studio telemetry dashboard screenshot
-│   ├── pid_diagram.svg            Piping and Instrumentation Diagram (P&ID)
-│   ├── electrical_schematic.svg   LAM Stage 2 PCB electrical wiring schematic
-│   ├── state_machine.svg          Finite State Machine state transition diagram
 │   ├── pcb_clamp_cad_3d.png       PCB foot 3D CAD render
 │   ├── pcb_clamp_dimensions.png   PCB foot engineering blueprint
 │   ├── pipe_clamp_cad_3d.png      Pipe clamp 3D CAD render
@@ -281,7 +288,7 @@ The firmware broadcasts real-time telemetry frames once per second at **115200 b
 4. Select **Serial Port**, select your ESP32 COM port, set **Baud Rate** to `115200`, and click **Connect**.
 
 ![Serial Studio Dashboard](media/serial_studio_dashboard.png)
-*Figure 5: Live Serial Studio Dashboard: Flow rate dials, pulse frequency, volume totalizer, and calibration error.*
+*Figure 2: Live Serial Studio Dashboard: Flow rate dials, pulse frequency, volume totalizer, and calibration error.*
 
 ---
 
@@ -314,10 +321,10 @@ $$\dot{Q}\ (\text{L/min}) = 0.009244 \times f\ (\text{Hz}) + 0.040111$$
 | **Independent Validation Error** | `1.06%` | $\le 3.0\%$ | **Pass** |
 
 ![FT-01 Calibration Curve](media/ft01_calibration_curve.png)
-*Figure 6: FT-01 turbine pulse frequency vs measured volumetric flow rate showing linear fit ($R^2 = 0.99668$).*
+*Figure 3: FT-01 turbine pulse frequency vs measured volumetric flow rate showing linear fit ($R^2 = 0.99668$).*
 
 ![FT-01 Calibration Error](media/ft01_calibration_error.png)
-*Figure 7: Percentage calibration error across operating flow envelope with independent validation point.*
+*Figure 4: Percentage calibration error across operating flow envelope with independent validation point.*
 
 ### Ball Valve Throttling Curve (`analysis/data/valve_characterization.csv`)
 Recorded with Pump-2 operating at 100% duty cycle across 4 handle opening positions:
@@ -330,7 +337,7 @@ Recorded with Pump-2 operating at 100% duty cycle across 4 handle opening positi
 | 100% | 218.8 | 2.063 | 2.063 |
 
 ![Valve Throttling Curve](media/valve_position_vs_flow.png)
-*Figure 8: Measured volumetric flow rate (L/min) as a function of ball valve opening percentage.*
+*Figure 5: Measured volumetric flow rate (L/min) as a function of ball valve opening percentage.*
 
 ### How to Run Analysis Scripts
 - **Python:**
