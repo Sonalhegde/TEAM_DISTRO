@@ -13,6 +13,9 @@
 **Automated Liquid-Handling, Recirculation, and Telemetry Platform**
 
 👉 **[Launch Live 3D Digital Twin Simulation](https://sonalhegde.github.io/TEAM_DISTRO/)** 👈
+    **📊 Team DISTRO Presentation: https://drive.google.com/file/d/10BZNDP2cnqSBqfE3b11lk_6qCRlyOtN2/view?usp=drive_link
+📄 Stage 2 Practical Engineering Challenge PDF: https://drive.google.com/file/d/1mI3886kun4H3olHrglMHzYJjbUjEaSkm/view?usp=drive_link
+🎥 Rig Automation & Testing Journey Video: https://drive.google.com/file/d/1YkWeLo3Ct3zWrAMsbKcDU-8LQFBE7EN8/view?usp=drive_link**
 
 <br/><br/>
 
