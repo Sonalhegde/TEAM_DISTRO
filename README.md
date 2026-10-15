@@ -52,10 +52,13 @@ All operational states are implemented in [`firmware/main/config.h`](firmware/ma
 | State Name | State ID | Solenoid OV-01 | Pump 1 Duty | Pump 2 Duty | Pump 3 Duty | Entry & Exit Conditions |
 |---|:---:|:---:|:---:|:---:|:---:|---|
 | **`ST_IDLE`** | 0 | CLOSED (High-Z) | 0% | 0% | 0% | Safe standby. Awaits operator start command (`1`, `2`, `a`, or SW-01). |
-| **`ST_CASE1_RECIRC`** | 1 | OPEN (Active LOW) | 50% | 100% | 0% | Recirculates fluid at steady 3.0 L/min. Transitions to `ST_CASE1_SURGE_HOLD` if LS-01 trips. |
-| **`ST_CASE1_SURGE_HOLD`** | 2 | OPEN (Active LOW) | 0% | 100% | 0% | Overflow protection interlock. Pump 1 halted; Pump 2 clears sump until LS-01 clears for 3.0 s. |
-| **`ST_CASE2_FLUSH_RUN`** | 3 | CLOSED (High-Z) | 50% | 100% | 100% | Concurrent 3-pump flush. Shuts down when flow collapses (< 0.35 L/min) or delivered volume reaches 4.15 L. |
-| **`ST_FAULT`** | 4 | CLOSED (High-Z) | 0% | 0% | 0% | Emergency lockout on dry-run timeout (> 3.0 s) or sensor failure. Requires manual reset. |
+| **`ST_CASE1_NORMAL`** | 1 | OPEN (Active LOW) | 50% | 100% | 0% | Recirculates fluid at steady 3.0 L/min. Transitions to `ST_CASE1_SURGE` if LS-01 trips. |
+| **`ST_CASE1_SURGE`** | 2 | OPEN (Active LOW) | 0% | 100% | 0% | Overflow protection interlock. Pump 1 halted; Pump 2 clears sump until LS-01 clears for 3.0 s. |
+| **`ST_CASE2_FLUSHING`** | 3 | CLOSED (High-Z) | 50% | 100% | 100% | Concurrent 3-pump flush. Shuts down when flow collapses (< 0.35 L/min) or delivered volume reaches 4.15 L. |
+| **`ST_CASE2_STOPPING`** | 4 | CLOSED (High-Z) | 0% | 0% | 0% | Flush line post-run staggered shutdown (pumps OFF, 500 ms anti-water-hammer delay). |
+| **`ST_FAULT`** | 5 | CLOSED (High-Z) | 0% | 0% | 0% | Emergency lockout on dry-run timeout (> 3.0 s) or sensor failure. Requires manual reset. |
+| **`ST_CASE1_DRAIN`** | 6 | CLOSED (High-Z) | 0% | 100% | 0% | Sump evacuation prior to line flush (Pump 2 active, OV-01 closed). |
+| **`ST_CALMODE`** | 7 | As commanded | Manual | Manual | Manual | Bench calibration DAQ mode (interactive CLI with safety guards). |
 
 ### Case 1: Closed-Loop Recirculation with Sump Level Protection
 - **Normal Recirculation:** Solenoid valve OV-01 opens (with a 200 ms non-blocking lead to pre-flood the suction line). Pump-1 operates at 50% PWM duty cycle to feed fluid from the 10 L main reservoir into the sump, while Pump-2 runs at 100% duty cycle to pump fluid through the FT-01 turbine flow meter and return it to the 10 L tank, maintaining steady 3.0 L/min closed-loop recirculation.
@@ -265,11 +268,27 @@ At 115200 baud, send commands via terminal:
   STATUS | State: CASE1_NORMAL | Interlock: ARMED (ACTIVE) | Sump: NORMAL | Flow: 3.012 L/min (21.43 Hz, 50.20 mL/s) | Total: 4.5120 L
          | Pulses: Total=3240, Window N=21, Run Pulses=0 | CAL_A=0.009244, CAL_B=0.040111
   ```
-- `1` / `case1`: Starts Case 1 Closed-Loop Recirculation.
-- `2` / `case2`: Starts Case 2 Autonomous Flush.
-- `a` / `auto`: Starts single-go automated sequence.
-- `0` / `stop`: Safe Emergency Stop (halts all actuators).
-- `demo`: Loads the 6 physical calibration trials and runs least-squares regression.
+- **Process Control:**
+  - `1` / `case1` / `s1`: Start Case 1 Closed-Loop Recirculation (`P1=50%`, `P2=100%`, `OV-01 OPEN`).
+  - `2` / `case2` / `s2`: Initiate Case 2 Flush (Autonomous until 4.2 L empty).
+  - `c2 <seconds>`: Timed Case 2 Flush (e.g. `c2 30` for bench test).
+  - `a` / `auto`: Run Single-Go Automated Sequence (Case 1 -> Case 2).
+  - `0` / `stop` / `x`: Safe Emergency Stop (All actuators OFF).
+  - `arm` / `unlock`: Remote Arm Master Safety Interlock.
+  - `disarm` / `lock`: Remote Disarm Master Safety Interlock (Safe Stop).
+  - `p1 <duty>` / `p2 <duty>` / `p3 <duty>`: Manual pump test (e.g. `p1 50`).
+  - `sov <1/0>`: Manual Solenoid Valve toggle (`1` = Open, `0` = Close).
+  - `rt`: Reset volumetric and flush totalizers to 0.000 L.
+  - `?`: Show full command reference menu.
+- **Calibration Protocol:**
+  - `S`: Start calibration run (records pulses & start time).
+  - `E`: End calibration run (freezes run duration and pulse count).
+  - `V <litres>`: Record collected reference volume (e.g. `V 1.00`).
+  - `FIT` / `CAL`: Display on-demand linear regression & error report.
+  - `APPLY`: Apply fitted slope & offset to active telemetry frame (`CAL_A`, `CAL_B`).
+  - `DEMO`: Load the 6 physical experimental rig calibration trials.
+  - `calmode on` / `calmode off`: Enter / leave guarded calibration mode.
+  - `C` / `CLEAR`: Clear calibration trials and reset run accumulators.
 
 ---
 
