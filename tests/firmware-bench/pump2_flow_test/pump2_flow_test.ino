@@ -1,20 +1,4 @@
-/*
- * ============================================================================
- * LAM RESEARCH CHALLENGE 3.0 - STAGE 2
- * ESP32 Standalone Hardware Bench Test: Pump 2 + FT-01 Turbine Flow Meter
- *
- * NOTE: This is a standalone Arduino IDE diagnostic sketch (Arduino-ESP32 Core 3.x),
- * not part of the ESP-IDF production firmware build.
- *
- * Pin assignments match firmware/main/config.h (LAM Stage 2 PCB Rev 1.0):
- *   L_EN2     -> GPIO 16
- *   R_EN2     -> GPIO 17
- *   L_PWM2    -> GPIO 18
- *   R_PWM2    -> GPIO 19 (held LOW)
- *   FS (Flow) -> GPIO 14 (open-collector, internal INPUT_PULLUP)
- * ============================================================================
- */
-
+// Standalone bench test: Pump 2 and FT-01 pulse flow sensor
 #include <Arduino.h>
 
 static const int PIN_L_EN2  = 16;
@@ -26,7 +10,7 @@ static const int PIN_FS     = 14;
 static const uint32_t PWM_FREQ_HZ = 5000;
 static const uint8_t  PWM_BITS    = 8;
 
-// Empirical calibration coefficients: Q = CAL_A * f + CAL_B
+// Calibrated relationship: Q = CAL_A * f + CAL_B
 static const double CAL_A = 0.009244;
 static const double CAL_B = 0.040111;
 
@@ -37,7 +21,7 @@ static float    currentDuty    = 100.0f;
 static double   totalVolumeL   = 0.0;
 
 void IRAM_ATTR isrFlowSensor() {
-    isrPulseCount = isrPulseCount + 1;
+    isrPulseCount++;
 }
 
 void setPump2Duty(float dutyPct) {
@@ -80,7 +64,7 @@ void handleSerial() {
             setPump2Duty(val);
             Serial.printf("[CMD] Pump 2 set to %.1f%% duty.\n", val);
         } else {
-            Serial.println("Commands: 0-100 (set duty), stop, reset/rt");
+            Serial.println("Commands: 0-100 (duty), stop, reset");
         }
     }
 }
@@ -88,11 +72,6 @@ void handleSerial() {
 void setup() {
     Serial.begin(115200);
     delay(500);
-
-    Serial.println("==================================================");
-    Serial.println("  PUMP 2 + FT-01 FLOW TRANSMITTER BENCH TEST");
-    Serial.println("  Pins: PWM=18, L_EN=16, R_EN=17, Flow=14");
-    Serial.println("==================================================");
 
     pinMode(PIN_L_EN2, OUTPUT);
     pinMode(PIN_R_EN2, OUTPUT);
