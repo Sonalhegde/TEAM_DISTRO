@@ -1,14 +1,27 @@
 %% FT-01 calibration plots (Lam Research Challenge 3.0, Stage 2)
-% Data: 6 fitted trials + 1 validation trial, recorded from the firmware console.
+% Data source: analysis/data/calibration_trials.csv
 clear; clc; close all;
 
-% Trials used for the fit
-N   = [6678 5525 4316 2493 4881 6013];            % pulses
-t   = [30.584 30.378 30.777 30.210 30.571 30.409];% s
-V   = [1.040 0.870 0.700 0.390 0.790 0.940];      % L
+script_dir = fileparts(mfilename('fullpath'));
+csv_file = fullfile(script_dir, 'data', 'calibration_trials.csv');
 
-% Validation trial (not used in the fit)
-Nv = 3542; tv = 30.279; Vv = 0.560;
+if exist(csv_file, 'file')
+    T = readtable(csv_file);
+    is_fit = strcmpi(T.role, 'fit');
+    is_val = strcmpi(T.role, 'validation');
+    N  = T.pulses(is_fit)';
+    t  = T.time_s(is_fit)';
+    V  = T.volume_L(is_fit)';
+    Nv = T.pulses(is_val)';
+    tv = T.time_s(is_val)';
+    Vv = T.volume_L(is_val)';
+else
+    % Fallback hardcoded values matching data/calibration_trials.csv
+    N   = [6678 5525 4316 2493 4881 6013];
+    t   = [30.584 30.378 30.777 30.210 30.571 30.409];
+    V   = [1.040 0.870 0.700 0.390 0.790 0.940];
+    Nv = 3542; tv = 30.279; Vv = 0.560;
+end
 
 f   = N ./ t;            % Hz
 Q   = V ./ t * 60;       % L/min (actual)
@@ -27,7 +40,6 @@ fprintf('a = %.6f, b = %.6f, R^2 = %.5f\n', a, b, R2);
 fprintf('Max error = %.2f %%, Avg error = %.2f %%\n', max(err), mean(err));
 fprintf('Validation: Q_act = %.3f, Q_cal = %.3f, error = %.2f %%\n', Qv, Qv_cal, errv);
 
-script_dir = fileparts(mfilename('fullpath'));
 media_dir = fullfile(script_dir, '..', 'media');
 if ~exist(media_dir, 'dir'), mkdir(media_dir); end
 
@@ -45,7 +57,6 @@ text(120, 0.35, sprintf('R^2 = %.5f\nMax error = %.2f %%\nAvg error = %.2f %%', 
      'BackgroundColor','w', 'EdgeColor',[0.6 0.6 0.6]);
 xlim([0 240]); ylim([0 2.4]);
 exportgraphics(fig1, fullfile(media_dir, 'ft01_calibration_curve.png'), 'Resolution', 200);
-exportgraphics(fig1, 'ft01_calibration_curve.png', 'Resolution', 200);
 
 %% Figure 2: calibration error vs actual flow
 [Qs, idx] = sort(Q);
@@ -58,4 +69,3 @@ xlabel('Actual flow Q (L/min)'); ylabel('Calibration error (%)');
 title('FT-01 calibration error vs flow');
 legend('Calibration trials', 'Validation trial', 'Location','northeast');
 exportgraphics(fig2, fullfile(media_dir, 'ft01_calibration_error.png'), 'Resolution', 200);
-exportgraphics(fig2, 'ft01_calibration_error.png', 'Resolution', 200);

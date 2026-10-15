@@ -1,3 +1,4 @@
 ## ESP-IDF Component Manager Manifest
 dependencies:
+  idf: ">=5.1"
   espressif/arduino-esp32: "^3.0.0"

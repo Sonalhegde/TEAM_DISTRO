@@ -1,5 +1,5 @@
-valve_pos_pct,flow_rate_Lpm
-25,0.65
-50,1.85
-70,2.65
-100,3.20
+valve_pos_pct,pulse_freq_hz,flow_rate_Lpm
+25,105.9,1.019
+50,186.8,1.767
+75,215.8,2.035
+100,218.8,2.063

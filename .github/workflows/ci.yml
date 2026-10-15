@@ -1,0 +1,44 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - cleanup/history
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  simulation-tests:
+    name: Simulation Physics & Logic Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run 16-Test Simulation Validation Suite
+        run: node tests/simulation/run-tests.js
+
+  firmware-build:
+    name: Native ESP-IDF Controller Build
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.2.2
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Firmware
+        shell: bash
+        run: |
+          git config --global --add safe.directory '*'
+          . $IDF_PATH/export.sh
+          cd firmware
+          idf.py set-target esp32
+          idf.py build

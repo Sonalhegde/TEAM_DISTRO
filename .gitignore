@@ -1,20 +1,15 @@
 # Build outputs
 build/
-firmware/build/
 sdkconfig
 sdkconfig.old
-firmware/sdkconfig
-firmware/sdkconfig.old
 managed_components/
-firmware/managed_components/
 dependencies.lock
-firmware/dependencies.lock
 
 # IDE and Editor files
 .vscode/
 .idea/
 .clangd/
-firmware/.clangd/
+.cache/
 .pio/
 *.code-workspace
 
