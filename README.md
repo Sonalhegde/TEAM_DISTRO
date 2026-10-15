@@ -9,13 +9,22 @@
 ![Firmware](https://img.shields.io/badge/Firmware-Native%20ESP--IDF%20C%2B%2B-teal?style=for-the-badge&logo=espressif)
 ![Serial Studio](https://img.shields.io/badge/Dashboard-Serial%20Studio-orange?style=for-the-badge)
 
+<br>
+
+[![Presentation](https://img.shields.io/badge/Google%20Drive-Team%20Presentation-EA4335?style=for-the-badge&logo=googledrive&logoColor=white)](https://drive.google.com/file/d/10BZNDP2cnqSBqfE3b11lk_6qCRlyOtN2/view?usp=drive_link)
+[![Challenge PDF](https://img.shields.io/badge/Google%20Drive-Challenge%20PDF-4285F4?style=for-the-badge&logo=googledrive&logoColor=white)](https://drive.google.com/file/d/1mI3886kun4H3olHrglMHzYJjbUjEaSkm/view?usp=drive_link)
+[![Journey Video](https://img.shields.io/badge/Google%20Drive-Journey%20Video-34A853?style=for-the-badge&logo=googledrive&logoColor=white)](https://drive.google.com/file/d/1YkWeLo3Ct3zWrAMsbKcDU-8LQFBE7EN8/view?usp=drive_link)
+
 ### **Team DISTRO**
 **Automated Liquid-Handling, Recirculation, and Telemetry Platform**
 
-👉 **[Launch Live 3D Digital Twin Simulation](https://sonalhegde.github.io/TEAM_DISTRO/)** 
-    **📊 Team DISTRO Presentation: https://drive.google.com/file/d/10BZNDP2cnqSBqfE3b11lk_6qCRlyOtN2/view?usp=drive_link**
-**📄 Stage 2 Practical Engineering Challenge PDF: https://drive.google.com/file/d/1mI3886kun4H3olHrglMHzYJjbUjEaSkm/view?usp=drive_link**
-**🎥 Rig Automation & Testing Journey Video: https://drive.google.com/file/d/1YkWeLo3Ct3zWrAMsbKcDU-8LQFBE7EN8/view?usp=drive_link**
+👉 **[Launch Live 3D Digital Twin Simulation](https://sonalhegde.github.io/TEAM_DISTRO/)** 👈
+
+<br/>
+
+**📊 Team DISTRO Presentation:** [Google Drive Link](https://drive.google.com/file/d/10BZNDP2cnqSBqfE3b11lk_6qCRlyOtN2/view?usp=drive_link)  
+**📄 Stage 2 Practical Engineering Challenge PDF:** [Google Drive Link](https://drive.google.com/file/d/1mI3886kun4H3olHrglMHzYJjbUjEaSkm/view?usp=drive_link)  
+**🎥 Rig Automation & Testing Journey Video:** [Google Drive Link](https://drive.google.com/file/d/1YkWeLo3Ct3zWrAMsbKcDU-8LQFBE7EN8/view?usp=drive_link)
 
 <br/><br/>
 
@@ -24,6 +33,14 @@
 *Figure 1: Physical Experimental Rig Setup — 10 L main reservoir, 4.2 L flush reservoir, 4.5 L sump, 3 pumps, BTS7960 drivers, ESP32 NodeMCU-32S, FT-01 pulse turbine flow meter, solenoid valve OV-01, and float switch LS-01.*
 
 </div>
+
+> [!IMPORTANT]
+> ### 📁 Official Project Deliverables & Media Links
+> * 📊 **Team DISTRO Presentation:** [https://drive.google.com/file/d/10BZNDP2cnqSBqfE3b11lk_6qCRlyOtN2/view?usp=drive_link](https://drive.google.com/file/d/10BZNDP2cnqSBqfE3b11lk_6qCRlyOtN2/view?usp=drive_link)
+> * 📄 **Stage 2 Practical Engineering Challenge PDF:** [https://drive.google.com/file/d/1mI3886kun4H3olHrglMHzYJjbUjEaSkm/view?usp=drive_link](https://drive.google.com/file/d/1mI3886kun4H3olHrglMHzYJjbUjEaSkm/view?usp=drive_link)
+> * 🎥 **Rig Automation & Testing Journey Video:** [https://drive.google.com/file/d/1YkWeLo3Ct3zWrAMsbKcDU-8LQFBE7EN8/view?usp=drive_link](https://drive.google.com/file/d/1YkWeLo3Ct3zWrAMsbKcDU-8LQFBE7EN8/view?usp=drive_link)
+>
+> *(Direct shortcuts and references are also organized in the [`DRIVE LINKS/`](DRIVE%20LINKS/) directory at the root of this codebase).*
 
 This repository provides the complete embedded controller firmware, MATLAB calibration analysis scripts, 3D printable CAD models, and real-time DAQ dashboard for the Lam Research Challenge 3.0 Stage 2 automated liquid-handling rig (Team ID: LRC-26-0528).
 The system uses an ESP32 microcontroller with high-power BTS7960 H-bridge drivers to regulate fluid recirculation, protect against sump overflow surges, and execute automated line flushes with live serial telemetry.
@@ -124,6 +141,11 @@ Custom 3D-printed mechanical parts secure the electronics and piping to the alum
 
 ```text
 TEAM_DISTRO/
+├── DRIVE LINKS/                   Official Google Drive links (Presentation, Challenge PDF, Journey Video)
+│   ├── README.md                  Direct URLs and resource descriptions
+│   ├── 01_Team_DISTRO_Presentation.url  Desktop shortcut to slide deck
+│   ├── 02_Stage2_Challenge_PDF.url      Desktop shortcut to challenge PDF
+│   └── 03_Rig_Journey_Video.url         Desktop shortcut to journey video
 ├── README.md                      Unified master documentation, quick start, hardware tables, and setup guide
 ├── LICENSE                        Software licensing terms (MIT / Academic Open Access)
 ├── .gitignore                     Excludes build directories, sdkconfig, temporary logs, and IDE caches
